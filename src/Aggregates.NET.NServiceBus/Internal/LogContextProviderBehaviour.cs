@@ -1,4 +1,5 @@
-﻿using Aggregates.Extensions;
+﻿using Aggregates.Contracts;
+using Aggregates.Extensions;
 using Microsoft.Extensions.Logging;
 using NServiceBus;
 using NServiceBus.Pipeline;
@@ -15,9 +16,9 @@ namespace Aggregates.Internal
     {
         private readonly ILogger Logger;
 
-        private readonly Configure _settings;
+        private readonly ISettings _settings;
 
-        public LogContextProviderBehaviour(ILoggerFactory logFactory, Configure settings)
+        public LogContextProviderBehaviour(ILoggerFactory logFactory, ISettings settings)
         {
             Logger = logFactory.CreateLogger("LogContextProvider");
             _settings = settings;

@@ -25,7 +25,7 @@ namespace Aggregates.Internal
         private readonly IMessageSerializer _serializer;
         private readonly int _retries;
 
-        public ExceptionRejector(ILoggerFactory logFactory, Configure settings, IMetrics metrics, IMessageSerializer serializer, DelayedRetry retry)
+        public ExceptionRejector(ILoggerFactory logFactory, ISettings settings, IMetrics metrics, IMessageSerializer serializer, DelayedRetry retry)
         {
             Logger = logFactory.CreateLogger("ExceptionRejector");
             _metrics = metrics;

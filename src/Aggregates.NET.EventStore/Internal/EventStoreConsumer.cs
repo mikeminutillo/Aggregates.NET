@@ -39,7 +39,7 @@ namespace Aggregates.Internal
         private readonly ConcurrentDictionary<string, Tuple<EventStorePersistentSubscriptionBase, Guid>> _outstandingEvents;
         private bool _disposed;
 
-        public EventStoreConsumer(ILoggerFactory logFactory, Configure settings, IMetrics metrics, IMessageSerializer serializer, IVersionRegistrar registrar, IEventStoreConnection[] clients, IEventMapper mapper)
+        public EventStoreConsumer(ILoggerFactory logFactory, ISettings settings, IMetrics metrics, IMessageSerializer serializer, IVersionRegistrar registrar, IEventStoreConnection[] clients, IEventMapper mapper)
         {
             Logger = logFactory.CreateLogger("EventStoreConsumer");
             _metrics = metrics;

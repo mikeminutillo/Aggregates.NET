@@ -1,5 +1,6 @@
 ﻿using Aggregates.Contracts;
 using Aggregates.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -16,15 +17,17 @@ namespace Aggregates.Internal
         private string _endpoint;
         private Version _version;
 
-        private readonly Configure _settings;
+        private readonly ISettings _settings;
+        private readonly IServiceProvider _provider;
         private readonly IEventStoreConsumer _consumer;
         private readonly IStoreEvents _eventstore;
         private readonly IVersionRegistrar _registrar;
 
-        public TrackChildren(ILoggerFactory logFactory, Configure settings, IEventStoreConsumer consumer, IStoreEvents eventstore, IVersionRegistrar registrar)
+        public TrackChildren(ILoggerFactory logFactory, ISettings settings, IServiceProvider provider, IEventStoreConsumer consumer, IStoreEvents eventstore, IVersionRegistrar registrar)
         {
             Logger = logFactory.CreateLogger("TrackChildren");
             _settings = settings;
+            _provider = provider;
             _consumer = consumer;
             _eventstore = eventstore;
             _registrar = registrar;
@@ -105,7 +108,7 @@ fromCategory('{0}')
         }
         public async Task<TEntity[]> GetChildren<TEntity, TParent>(TParent parent) where TEntity : IChildEntity<TParent> where TParent : IHaveEntities<TParent>
         {
-            var uow = (_settings.LocalContainer.Value ?? _settings.Container).Resolve<Aggregates.UnitOfWork.IDomain>();
+            var uow = _provider.GetRequiredService<Aggregates.UnitOfWork.IDomain>();
             var streamGen = _settings.Generator;
 
             var parents = getParents(parent);

@@ -3,6 +3,7 @@ using Aggregates.Exceptions;
 using Aggregates.Extensions;
 using Aggregates.Internal;
 using Aggregates.Messages;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using System;
@@ -17,19 +18,21 @@ namespace Aggregates
     public class Configuration : IConfiguration
     {
 
-
+        public IServiceProvider ServiceProvider { get; internal set; }
 
         public bool Setup => Settings != null;
-        public Configure Settings { get; internal set; }
+        public ISettings Settings { get; internal set; }
 
-        public async Task Start()
+        public async Task Start(IServiceProvider serviceProvider)
         {
             if (Settings == null)
                 throw new InvalidOperationException("Settings must be built");
 
+            ServiceProvider = serviceProvider;
+
             try
             {
-                await Settings.SetupTasks.WhenAllAsync(x => x(Settings)).ConfigureAwait(false);
+                await Configure.SetupTasks.WhenAllAsync(x => x(serviceProvider, Settings)).ConfigureAwait(false);
             }
             catch
             {
@@ -39,13 +42,14 @@ namespace Aggregates
         }
 
 
-        public async static Task<IConfiguration> Build(Action<Configure> settings)
+        public async static Task<IConfiguration> Build(IServiceCollection serviceCollection, Action<Configure> settings)
         {
+            if (serviceCollection == null)
+                throw new ArgumentException("Must designate the service collection");
+
             var config = new Configure();
             settings(config);
 
-            if (config.Container == null)
-                throw new InvalidOperationException("Must designate a container implementation");
 
             var aggConfig = new Configuration();
 
@@ -53,9 +57,9 @@ namespace Aggregates
 
             try
             {
-                await config.RegistrationTasks.WhenAllAsync(x => x(config)).ConfigureAwait(false);
-                config.Container.Register<IConfiguration>(aggConfig, Lifestyle.Singleton);
-                config.Container.Register<Configure>((_) => aggConfig.Settings, Lifestyle.Singleton);
+                serviceCollection.AddSingleton<ISettings>(config);
+                serviceCollection.AddSingleton<IConfiguration>(aggConfig);
+                await Configure.RegistrationTasks.WhenAllAsync(x => x(serviceCollection, config)).ConfigureAwait(false);
             }
             catch
             {
@@ -66,10 +70,12 @@ namespace Aggregates
     }
 
 
-    public class Configure
+    public class Configure : ISettings
     {
-        public readonly Version EndpointVersion;
-        public readonly Version AggregatesVersion;
+        public IServiceProvider ServiceProvider { get; internal set; }
+
+        public Version EndpointVersion { get; private set; }
+        public Version AggregatesVersion { get; private set; }
 
         // Log settings
         public TimeSpan? SlowAlertThreshold { get; internal set; }
@@ -105,23 +111,20 @@ namespace Aggregates
 
         public string MessageContentType { get; internal set; }
 
-        internal List<Func<Configure, Task>> RegistrationTasks;
-        internal List<Func<Configure, Task>> SetupTasks;
-        internal List<Func<Configure, Task>> StartupTasks;
-        internal List<Func<Configure, Task>> ShutdownTasks;
-
-        internal AsyncLocal<IContainer> LocalContainer;
-        internal IContainer Container;
-        
+        internal static List<Func<IServiceCollection, ISettings, Task>> RegistrationTasks;
+        internal static List<Func<IServiceProvider, ISettings, Task>> SetupTasks;
+        internal static List<Func<IServiceProvider, ISettings, Task>> StartupTasks;
+        internal static List<Func<IServiceProvider, ISettings, Task>> ShutdownTasks;
+                
         public Configure()
         {
             EndpointVersion = Assembly.GetEntryAssembly()?.GetName().Version ?? new Version(0, 0, 0);
             AggregatesVersion = Assembly.GetExecutingAssembly()?.GetName().Version ?? new Version(0, 0, 0);
 
-            RegistrationTasks = new List<Func<Configure, Task>>();
-            SetupTasks = new List<Func<Configure, Task>>();
-            StartupTasks = new List<Func<Configure, Task>>();
-            ShutdownTasks = new List<Func<Configure, Task>>();
+            RegistrationTasks = new List<Func<IServiceCollection, ISettings, Task>>();
+            SetupTasks = new List<Func<IServiceProvider, ISettings, Task>>();
+            StartupTasks = new List<Func<IServiceProvider, ISettings, Task>>();
+            ShutdownTasks = new List<Func<IServiceProvider, ISettings, Task>>();
 
             Endpoint = "demo";
             // Set sane defaults
@@ -138,68 +141,64 @@ namespace Aggregates
             DelayedExpiration = TimeSpan.FromMinutes(5);
             MaxDelayed = 5000;
             MessageContentType = "";
-            LocalContainer = new AsyncLocal<IContainer>();
 
-            RegistrationTasks.Add((c) =>
+            RegistrationTasks.Add((container, settings) =>
             {
-                var container = c.Container;
 
-                container.Register<IRandomProvider>(new RealRandomProvider(), Lifestyle.Singleton);
-                container.Register<ITimeProvider>(new RealTimeProvider(), Lifestyle.Singleton);
+                container.AddSingleton<IRandomProvider>(new RealRandomProvider());
+                container.AddSingleton<ITimeProvider>(new RealTimeProvider());
 
                 // Provide a "default" logger so user doesnt need to provide if they dont want to
-                container.Register<ILoggerFactory>(NullLoggerFactory.Instance, Lifestyle.PerInstance);
+                container.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
 
-                // Register ourselves with ourselves
-                container.Register<IContainer>(container, Lifestyle.Singleton);
+                container.AddTransient<IProcessor, Processor>();
+                container.AddSingleton<IVersionRegistrar, VersionRegistrar>();
 
-                container.Register<IProcessor, Processor>(Lifestyle.PerInstance);
-                container.Register<IVersionRegistrar, VersionRegistrar>(Lifestyle.Singleton);
-
-                if (!c.Passive)
+                if (!settings.Passive)
                 {
                     // A library which managing UOW needs to register the domain unit of work. 
                     // DI containers are designed to append registrations if multiple are present
                     //container.Register<UnitOfWork.IDomain, Internal.UnitOfWork>(Lifestyle.UnitOfWork);
 
-                    container.Register<IDelayedChannel, DelayedChannel>(Lifestyle.UnitOfWork);
-                    container.Register<IRepositoryFactory, RepositoryFactory>(Lifestyle.PerInstance);
-                    container.Register<IStoreSnapshots>((factory) => new StoreSnapshots(factory.Resolve<ILoggerFactory>(), this, factory.Resolve<IMetrics>(), factory.Resolve<IStoreEvents>(), factory.Resolve<ISnapshotReader>(), factory.Resolve<IVersionRegistrar>()), Lifestyle.Singleton);
-                    container.Register<IOobWriter>((factory) => new OobWriter(factory.Resolve<ILoggerFactory>(), this, factory.Resolve<IMessageDispatcher>(), factory.Resolve<IStoreEvents>(), factory.Resolve<IVersionRegistrar>()), Lifestyle.Singleton);
-                    container.Register<ISnapshotReader, SnapshotReader>(Lifestyle.Singleton);
-                    container.Register<IStoreEntities, StoreEntities>(Lifestyle.Singleton);
-                    container.Register<IDelayedCache>((factory) => new DelayedCache(factory.Resolve<ILoggerFactory>(), this, factory.Resolve<IMetrics>(), factory.Resolve<IStoreEvents>(), factory.Resolve<IVersionRegistrar>(), factory.Resolve<IRandomProvider>(), factory.Resolve<ITimeProvider>()), Lifestyle.Singleton);
+                    container.AddScoped<IDelayedChannel, DelayedChannel>();
+                    container.AddTransient<IRepositoryFactory, RepositoryFactory>();
+                    container.AddSingleton<IStoreSnapshots, StoreSnapshots>();
+                    container.AddSingleton<ISnapshotReader, SnapshotReader>();
+                    container.AddSingleton<IOobWriter, OobWriter>();
+                    container.AddSingleton<IStoreEntities, StoreEntities>();
+                    container.AddSingleton<IDelayedCache, DelayedCache>();
 
-                    container.Register<IEventSubscriber>((factory) => new EventSubscriber(factory.Resolve<ILoggerFactory>(), this, factory.Resolve<IMetrics>(), factory.Resolve<IMessaging>(), factory.Resolve<IEventStoreConsumer>(), factory.Resolve<IVersionRegistrar>(), c.ParallelEvents, c.AllEvents), Lifestyle.Singleton, "eventsubscriber");
-                    container.Register<IEventSubscriber>((factory) => new DelayedSubscriber(factory.Resolve<ILoggerFactory>(), this, factory.Resolve<IMetrics>(), factory.Resolve<IEventStoreConsumer>(), factory.Resolve<IMessageDispatcher>(), c.Retries), Lifestyle.Singleton, "delayedsubscriber");
-                    container.Register<IEventSubscriber>((factory) => (IEventSubscriber)factory.Resolve<ISnapshotReader>(), Lifestyle.Singleton, "snapshotreader");
+                    // todo: multiple interfaces are not supported (could be wrong actually GetServices exists)
+                    container.AddSingleton<IEventSubscriber, EventSubscriber>();
+                    container.AddSingleton<IEventSubscriber, DelayedSubscriber>();
+                    container.AddSingleton<IEventSubscriber, EventSubscriber>();
 
-                    container.Register<ITrackChildren, TrackChildren>(Lifestyle.Singleton);
+                    container.AddSingleton<ITrackChildren, TrackChildren>();
 
                 }
-                container.Register<IMetrics, NullMetrics>(Lifestyle.Singleton);
+                container.AddSingleton<IMetrics, NullMetrics>();
 
-                container.Register<StreamIdGenerator>(Generator, Lifestyle.Singleton);
+                container.AddSingleton<StreamIdGenerator>(Generator);
 
-                container.Register<Action<Exception, string, Error>>((ex, error, message) =>
+                container.AddSingleton<Action<Exception, string, Error>>((ex, error, message) =>
                 {
                     message.Message = $"{message} - {ex.GetType().Name}: {ex.Message}";
                     message.Trace = ex.AsString();
-                }, Lifestyle.Singleton);
+                });
 
-                container.Register<Action<Accept>>((_) =>
+                container.AddSingleton<Action<Accept>>((_) =>
                 {
-                }, Lifestyle.Singleton);
+                });
 
-                container.Register<Action<BusinessException, Reject>>((ex, message) =>
+                container.AddSingleton<Action<BusinessException, Reject>>((ex, message) =>
                 {
                     message.Exception = ex;
                     message.Message= $"{ex.GetType().Name} - {ex.Message}";
-                }, Lifestyle.Singleton);
+                });
 
                 return Task.CompletedTask;
             });
-            StartupTasks.Add((c) =>
+            StartupTasks.Add((container, settings) =>
             {
                 return Task.CompletedTask;
             });
@@ -312,18 +311,18 @@ namespace Aggregates
 
         public Configure AddMetrics<TImplementation>() where TImplementation : class, IMetrics
         {
-            RegistrationTasks.Add((c) =>
+            RegistrationTasks.Add((container, settings) =>
             {
-                c.Container.Register<IMetrics, TImplementation>(Lifestyle.Singleton);
+                container.AddSingleton<IMetrics, TImplementation>();
                 return Task.CompletedTask;
             });
             return this;
         }
         public Configure AddLogging(ILoggerFactory factory)
         {
-            RegistrationTasks.Add((c) =>
+            RegistrationTasks.Add((container, settings) =>
             {
-                c.Container.Register<ILoggerFactory>(factory, Lifestyle.Singleton);
+                container.AddSingleton<ILoggerFactory>(factory);
                 return Task.CompletedTask;
             });
             return this;

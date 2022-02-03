@@ -7,6 +7,7 @@ using Aggregates.Contracts;
 using Aggregates.Exceptions;
 using Aggregates.Extensions;
 using Aggregates.Messages;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Aggregates.Internal
@@ -24,22 +25,22 @@ namespace Aggregates.Internal
         {
         }
 
-        public IResolveConflicts Build(IContainer container, Type type = null)
+        public IResolveConflicts Build(IServiceProvider container, Type type = null)
         {
             switch (this.Value)
             {
                 case ConcurrencyConflict.Throw:
-                    return container.Resolve<ThrowConflictResolver>();
+                    return container.GetRequiredService<ThrowConflictResolver>();
                 case ConcurrencyConflict.Ignore:
-                    return container.Resolve<IgnoreConflictResolver>();
+                    return container.GetRequiredService<IgnoreConflictResolver>();
                 case ConcurrencyConflict.Discard:
-                    return container.Resolve<DiscardConflictResolver>();
+                    return container.GetRequiredService<DiscardConflictResolver>();
                 case ConcurrencyConflict.ResolveStrongly:
-                    return container.Resolve<ResolveStronglyConflictResolver>();
+                    return container.GetRequiredService<ResolveStronglyConflictResolver>();
                 case ConcurrencyConflict.ResolveWeakly:
-                    return container.Resolve<ResolveWeaklyConflictResolver>();
+                    return container.GetRequiredService<ResolveWeaklyConflictResolver>();
                 case ConcurrencyConflict.Custom:
-                    return (IResolveConflicts)container.Resolve(type);
+                    return (IResolveConflicts)container.GetRequiredService(type);
             };
             throw new InvalidOperationException($"Unknown conflict resolver: {this.Value}");
         }

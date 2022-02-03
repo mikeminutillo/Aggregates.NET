@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
 using Aggregates.Contracts;
+using Microsoft.Extensions.DependencyInjection;
 using NServiceBus.MessageInterfaces;
 using NServiceBus.Settings;
 
@@ -18,10 +19,10 @@ namespace Aggregates.Internal
     class Serializer : NServiceBus.Serialization.IMessageSerializer
     {
         public string ContentType => _settings.MessageContentType;
-        private readonly Configure _settings;
-        private Lazy<IMessageSerializer> _serializer => new Lazy<IMessageSerializer>(() => _settings.Container.Resolve<IMessageSerializer>());
+        private readonly ISettings _settings;
+        private Lazy<IMessageSerializer> _serializer => new Lazy<IMessageSerializer>(() => _settings.ServiceProvider.GetRequiredService<IMessageSerializer>());
 
-        public Serializer(Configure settings)
+        public Serializer(ISettings settings)
         {
             _settings = settings;
         }
@@ -41,9 +42,10 @@ namespace Aggregates.Internal
     [ExcludeFromCodeCoverage]
     class AggregatesSerializer : NServiceBus.Serialization.SerializationDefinition
     {
+
         public override Func<IMessageMapper, NServiceBus.Serialization.IMessageSerializer> Configure(ReadOnlySettings settings)
         {
-            var aggSettings = settings.Get<Configure>(NSBDefaults.AggregatesSettings);
+            var aggSettings = settings.Get<ISettings>(NSBDefaults.AggregatesSettings);
 
             return mapper => new Serializer(aggSettings);
         }

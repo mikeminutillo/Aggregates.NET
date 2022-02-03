@@ -3,6 +3,7 @@ using Aggregates.Extensions;
 using EventStore.ClientAPI;
 using EventStore.ClientAPI.SystemData;
 using Language;
+using Microsoft.Extensions.Logging;
 using NServiceBus;
 using NServiceBus.Features;
 using NServiceBus.Pipeline;
@@ -138,12 +139,14 @@ namespace Client
 
 
             var client = await ConfigureStore();
+            var loggingFactory = new LoggerFactory().AddSerilog(Log.Logger);
 
             var agg = await Aggregates.Configuration.Build(c => c
                     .StructureMap(_container)
                     .EventStore(new[] { client })
                     .NewtonsoftJson()
                     .NServiceBus(config)
+                    .AddLogging(loggingFactory)
                     ).ConfigureAwait(false);
 
             await agg.Start().ConfigureAwait(false);
@@ -202,23 +205,5 @@ namespace Client
             return client;
         }
 
-    }
-    public class LogIncomingMessageBehavior : Behavior<IIncomingLogicalMessageContext>
-    {
-        public override Task Invoke(IIncomingLogicalMessageContext context, Func<Task> next)
-        {
-
-            Log.Debug("<{EventId:l}> Received message '{MessageType}'.\n" +
-                            "ToString() of the message yields: {MessageBody}\n" +
-                            "Message headers:\n{MessageHeaders}", "Incoming",
-                            context.Message.MessageType != null ? context.Message.MessageType.AssemblyQualifiedName : "unknown",
-                context.Message.Instance,
-                string.Join(", ", context.MessageHeaders.Select(h => h.Key + ":" + h.Value).ToArray()));
-
-
-            return next();
-
-        }
-        
-    }
+    } 
 }

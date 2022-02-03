@@ -15,6 +15,7 @@ using NServiceBus.Settings;
 using NServiceBus.Unicast.Messages;
 using NServiceBus.Unicast;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Aggregates
 {
@@ -47,24 +48,23 @@ namespace Aggregates
             }
 
 
-            config.RegistrationTasks.Add(c =>
+            Configure.RegistrationTasks.Add((container, settings) =>
             {
-                var container = c.Container;
 
-                container.Register(factory => new Aggregates.Internal.DelayedRetry(factory.Resolve<ILoggerFactory>(), factory.Resolve<IMetrics>(), factory.Resolve<IMessageDispatcher>()), Lifestyle.Singleton);
+                container.AddSingleton<Internal.DelayedRetry>();
+                container.AddSingleton<IEventMapper, EventMapper>();
 
-                container.Register<IEventMapper>((factory) => new EventMapper(factory.Resolve<IMessageMapper>()), Lifestyle.Singleton);
+                container.AddScoped<UnitOfWork.IDomain, NSBUnitOfWork>();
 
-                container.Register<UnitOfWork.IDomain>((factory) => new NSBUnitOfWork(factory.Resolve<ILoggerFactory>(), factory.Resolve<IRepositoryFactory>(), factory.Resolve<IEventFactory>(), factory.Resolve<IVersionRegistrar>()), Lifestyle.UnitOfWork);
-                container.Register<IEventFactory>((factory) => new EventFactory(factory.Resolve<IMessageMapper>()), Lifestyle.Singleton);
-                container.Register<IMessageDispatcher>((factory) => new Dispatcher(factory.Resolve<ILoggerFactory>(), factory.Resolve<IMetrics>(), factory.Resolve<IMessageSerializer>(), factory.Resolve<IEventMapper>(), factory.Resolve<IVersionRegistrar>()), Lifestyle.Singleton);
-                container.Register<IMessaging>((factory) => new NServiceBusMessaging(factory.Resolve<MessageHandlerRegistry>(), factory.Resolve<MessageMetadataRegistry>(), factory.Resolve<ReadOnlySettings>()), Lifestyle.Singleton);
+                container.AddSingleton<IEventFactory, EventFactory>();
+                container.AddSingleton<IMessageDispatcher, Dispatcher>();
+                container.AddSingleton<IMessaging, NServiceBusMessaging>();
 
-                var settings = endpointConfig.GetSettings();
+                var nsbSettings = endpointConfig.GetSettings();
 
-                settings.Set("Retries", config.Retries);
-                settings.Set("SlowAlertThreshold", config.SlowAlertThreshold);
-                settings.Set("CommandDestination", config.CommandDestination);
+                nsbSettings.Set("Retries", config.Retries);
+                nsbSettings.Set("SlowAlertThreshold", config.SlowAlertThreshold);
+                nsbSettings.Set("CommandDestination", config.CommandDestination);
 
                 // Set immediate retries to 0 - we handle retries ourselves any message which throws should be sent to error queue
                 endpointConfig.Recoverability().Immediate(x =>
@@ -78,21 +78,21 @@ namespace Aggregates
                 });
 
 
-                endpointConfig.MakeInstanceUniquelyAddressable(c.UniqueAddress);
-                endpointConfig.LimitMessageProcessingConcurrencyTo(c.ParallelMessages);
+                endpointConfig.MakeInstanceUniquelyAddressable(settings.UniqueAddress);
+                endpointConfig.LimitMessageProcessingConcurrencyTo(settings.ParallelMessages);
                 // NSB doesn't have an endpoint name setter other than the constructor, hack it in
-                settings.Set("NServiceBus.Routing.EndpointName", c.Endpoint);
+                nsbSettings.Set("NServiceBus.Routing.EndpointName", settings.Endpoint);
 
-                startableEndpoint = EndpointWithExternallyManagedContainer.Create(endpointConfig, new Internal.ContainerAdapter(config));
+                startableEndpoint = EndpointWithExternallyManagedServiceProvider.Create(endpointConfig, container);
 
                 return Task.CompletedTask;
             });
 
             // Split creating the endpoint and starting the endpoint into 2 seperate jobs for certain (MICROSOFT) DI setup
 
-            config.SetupTasks.Add((c) =>
+            Configure.SetupTasks.Add((container, settings) =>
             {
-                return Aggregates.Bus.Start(config, startableEndpoint);
+                return Aggregates.Bus.Start(container, startableEndpoint);
             });
 
             return config;

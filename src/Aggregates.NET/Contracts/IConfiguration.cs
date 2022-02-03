@@ -7,9 +7,11 @@ namespace Aggregates.Contracts
 {
     public interface IConfiguration
     {
-        bool Setup { get; }
-        Configure Settings { get; }
+        IServiceProvider ServiceProvider { get; }
 
-        Task Start();
+        bool Setup { get; }
+        ISettings Settings { get; }
+
+        Task Start(IServiceProvider serviceProvider);
     }
 }

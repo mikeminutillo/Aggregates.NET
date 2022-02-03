@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Threading.Tasks;
+using Aggregates.Contracts;
 using Aggregates.Extensions;
 using Microsoft.Extensions.Logging;
 using NServiceBus;
@@ -20,7 +21,7 @@ namespace Aggregates.Internal
         private static readonly object SlowLock = new object();
         private readonly TimeSpan? _slowAlert;
 
-        public TimeExecutionBehavior(ILoggerFactory logFactory, Configure settings)
+        public TimeExecutionBehavior(ILoggerFactory logFactory, ISettings settings)
         {
             Logger = logFactory.CreateLogger("TimeExecutionBehavior");
             SlowLogger = logFactory.CreateLogger("Slow Alarm");

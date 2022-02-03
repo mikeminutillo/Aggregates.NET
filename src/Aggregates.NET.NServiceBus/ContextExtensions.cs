@@ -10,6 +10,7 @@ using Aggregates.Internal;
 using System.Diagnostics.CodeAnalysis;
 using Aggregates.Sagas;
 using NServiceBus.Pipeline;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Aggregates
 {
@@ -38,27 +39,27 @@ namespace Aggregates
         public static Task<TResponse> Service<TService, TResponse>(this IMessageHandlerContext context, TService service)
             where TService : class, IService<TResponse>
         {
-            var container = context.Extensions.Get<IContainer>();
+            var settings = context.Extensions.Get<ISettings>();
             IProcessor processor;
             if(!context.Extensions.TryGet<IProcessor>(out processor))
-                processor = container.Resolve<IProcessor>();
-            return processor.Process<TService, TResponse>(service, container);
+                processor = settings.ServiceProvider.GetRequiredService<IProcessor>();
+            return processor.Process<TService, TResponse>(service, settings.ServiceProvider);
         }
         public static Task<TResponse> Service<TService, TResponse>(this IMessageHandlerContext context, Action<TService> service)
             where TService : class, IService<TResponse>
         {
-            var container = context.Extensions.Get<IContainer>();
+            var settings = context.Extensions.Get<ISettings>();
             IProcessor processor;
             if (!context.Extensions.TryGet<IProcessor>(out processor))
-                processor = container.Resolve<IProcessor>();
+                processor = settings.ServiceProvider.GetRequiredService<IProcessor>();
 
-            return processor.Process<TService, TResponse>(service, container);
+            return processor.Process<TService, TResponse>(service, settings.ServiceProvider);
         }
 
         public static Task SendToSelf(this IMessageHandlerContext context, Messages.ICommand command)
         {
-            var container = context.Extensions.Get<IContainer>();
-            var dispatcher = container.Resolve<IMessageDispatcher>();
+            var settings = context.Extensions.Get<ISettings>();
+            var dispatcher = settings.ServiceProvider.GetRequiredService<IMessageDispatcher>();
 
             var message = new FullMessage
             {
@@ -81,10 +82,10 @@ namespace Aggregates
 
             return new CommandSaga(context, sagaId.ToString(), currentMessage, domainDestination);
         }
-        public static Configure GetSettings(this IMessageHandlerContext context)
+        public static ISettings GetSettings(this IMessageHandlerContext context)
         {
-            var container = context.Extensions.Get<IContainer>();
-            return container.Resolve<Configure>();
+            var settings = context.Extensions.Get<ISettings>();
+            return settings;
         }
     }
 }

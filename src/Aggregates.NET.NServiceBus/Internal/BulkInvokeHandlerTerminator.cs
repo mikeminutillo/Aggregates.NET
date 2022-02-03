@@ -15,6 +15,7 @@ using NServiceBus.MessageInterfaces;
 using NServiceBus.ObjectBuilder;
 using NServiceBus.Pipeline;
 using NServiceBus.Sagas;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Aggregates.Internal
 {
@@ -38,12 +39,15 @@ namespace Aggregates.Internal
         private static readonly HashSet<string> IsNotDelayed = new HashSet<string>();
 
         private readonly IEventMapper _mapper;
+        private readonly IServiceProvider _provider;
         private readonly IMetrics _metrics;
 
-        public BulkInvokeHandlerTerminator(ILoggerFactory factory, IMetrics metrics, IEventMapper mapper)
+        public BulkInvokeHandlerTerminator(ILoggerFactory factory, IServiceProvider provider, IMetrics metrics, IEventMapper mapper)
         {
             _mapper = mapper;
+            _provider = provider;
             _metrics = metrics;
+
             Logger = factory.CreateLogger("BulkInvokeHandler");
             SlowLogger = factory.CreateLogger("Slow Alarm");
         }
@@ -52,19 +56,9 @@ namespace Aggregates.Internal
         {
             if (context.Extensions.TryGet(out ActiveSagaInstance saga) && saga.NotFound && ((SagaMetadata)(saga.GetType().GetProperty("Metadata", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(saga))).SagaType == context.MessageHandler.Instance.GetType())
                 return;
-            
 
-            IDelayedChannel channel = null;
-            try
-            {
-                IContainer container;
-                if (context.Extensions.TryGet<IContainer>(out container))
-                    channel = container.Resolve<IDelayedChannel>();
-            }
-            catch (Exception)
-            {
-                // Catch in case IDelayedChannel isn't registered which shouldn't happen unless a user registered Consumer without GetEventStore
-            }
+
+            var channel = _provider.GetService<IDelayedChannel>();
 
             var msgType = context.MessageBeingHandled.GetType();
             if (!msgType.IsInterface)

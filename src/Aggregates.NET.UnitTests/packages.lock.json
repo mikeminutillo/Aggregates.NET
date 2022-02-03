@@ -155,6 +155,19 @@
         "resolved": "4.7.0",
         "contentHash": "pTj+D3uJWyN3My70i2Hqo+OXixq3Os2D1nJ2x92FFo6sk8fYS1m1WLNTs0Dc1uPaViH0YvEEwvzddQ7y4rhXmA=="
       },
+      "Microsoft.Extensions.DependencyInjection": {
+        "type": "Transitive",
+        "resolved": "2.1.0",
+        "contentHash": "gqQviLfuA31PheEGi+XJoZc1bc9H9RsPa9Gq9XuDct7XGWSR9eVXjK5Sg7CSUPhTFHSuxUFY12wcTYLZ4zM1hg==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "2.1.0"
+        }
+      },
+      "Microsoft.Extensions.DependencyInjection.Abstractions": {
+        "type": "Transitive",
+        "resolved": "6.0.0",
+        "contentHash": "xlzi2IYREJH3/m6+lUrQlujzX8wDitm4QGnUu6kUXTQAWPuZY8i+ticFJbzfqaetLA6KR/rO6Ew/HuYD+bxifg=="
+      },
       "Microsoft.Extensions.Logging.Abstractions": {
         "type": "Transitive",
         "resolved": "6.0.0",
@@ -304,6 +317,15 @@
           "NServiceBus.Testing": "[7.0.0, 8.0.0)"
         }
       },
+      "NServiceBus.Extensions.DependencyInjection": {
+        "type": "Transitive",
+        "resolved": "1.0.1",
+        "contentHash": "kR3MxL5znYP71KZhbvRXYAu9uGqt0anxrbrtxM/ZfhO7viB09T+dtJOGHjISUUVfaRw55ORbzkATvcTlzZ/qBQ==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection": "2.1.0",
+          "NServiceBus": "[7.2.3, 8.0.0)"
+        }
+      },
       "NServiceBus.Testing": {
         "type": "Transitive",
         "resolved": "7.2.0",
@@ -431,17 +453,6 @@
         "type": "Transitive",
         "resolved": "4.3.2",
         "contentHash": "leXiwfiIkW7Gmn7cgnNcdtNAU70SjmKW3jxGj1iKHOvdn0zRWsgv/l2OJUO5zdGdiv2VRFnAsxxhDgMzofPdWg=="
-      },
-      "StructureMap": {
-        "type": "Transitive",
-        "resolved": "4.7.1",
-        "contentHash": "ePJIef6IFpQ+WmDoH2Xr4EFrnbI1z79Z8ukt5ZhlsjKgK47giEJmqnym9BXJ91meBj1dl/7Hn6Nw1amsLFbHJA==",
-        "dependencies": {
-          "System.Collections.Concurrent": "4.3.0",
-          "System.Reflection.Emit.Lightweight": "4.3.0",
-          "System.Reflection.TypeExtensions": "4.4.0",
-          "System.Runtime.Loader": "4.3.0"
-        }
       },
       "System.AppContext": {
         "type": "Transitive",
@@ -968,8 +979,12 @@
       },
       "System.Reflection.TypeExtensions": {
         "type": "Transitive",
-        "resolved": "4.4.0",
-        "contentHash": "dkmh/ySlwnXJp/1qYP9uyKkCK1CXR/REFzl7abHcArxBcV91mY2CgrrzSRA5Z/X4MevJWwXsklGRdR3A7K9zbg=="
+        "resolved": "4.3.0",
+        "contentHash": "7u6ulLcZbyxB5Gq0nMkQttcdBTx57ibzw+4IOXEfR+sXYQoHvjW5LTLyNr8O22UIMrqYbchJQJnos4eooYzYJA==",
+        "dependencies": {
+          "System.Reflection": "4.3.0",
+          "System.Runtime": "4.3.0"
+        }
       },
       "System.Resources.ResourceManager": {
         "type": "Transitive",
@@ -1037,16 +1052,6 @@
           "System.Runtime.InteropServices": "4.3.0",
           "System.Threading": "4.3.0",
           "runtime.native.System": "4.3.0"
-        }
-      },
-      "System.Runtime.Loader": {
-        "type": "Transitive",
-        "resolved": "4.3.0",
-        "contentHash": "DHMaRn8D8YCK2GG2pw+UzNxn/OHVfaWx7OTLBD/hPegHZZgcZh3H6seWegrC4BYwsfuGrywIuT+MQs+rPqRLTQ==",
-        "dependencies": {
-          "System.IO": "4.3.0",
-          "System.Reflection": "4.3.0",
-          "System.Runtime": "4.3.0"
         }
       },
       "System.Runtime.Numerics": {
@@ -1422,6 +1427,7 @@
         "type": "Project",
         "dependencies": {
           "Microsoft.CSharp": "4.7.0",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "6.0.0",
           "Microsoft.Extensions.Logging.Abstractions": "6.0.0"
         }
       },
@@ -1429,13 +1435,15 @@
         "type": "Project",
         "dependencies": {
           "Aggregates.NET": "1.0.0",
-          "EventStore.Client": "21.2.0"
+          "EventStore.Client": "21.2.0",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "6.0.0"
         }
       },
       "aggregates.net.newtonsoftjson": {
         "type": "Project",
         "dependencies": {
           "Aggregates.NET": "1.0.0",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "6.0.0",
           "Newtonsoft.Json": "13.0.1"
         }
       },
@@ -1443,15 +1451,10 @@
         "type": "Project",
         "dependencies": {
           "Aggregates.NET": "1.0.0",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "6.0.0",
           "NServiceBus": "7.4.6",
-          "NServiceBus.Callbacks": "3.0.0"
-        }
-      },
-      "aggregates.net.structuremap": {
-        "type": "Project",
-        "dependencies": {
-          "Aggregates.NET": "1.0.0",
-          "StructureMap": "4.7.1"
+          "NServiceBus.Callbacks": "3.0.0",
+          "NServiceBus.Extensions.DependencyInjection": "1.0.1"
         }
       },
       "aggregates.net.testing": {

@@ -3,6 +3,7 @@ using Aggregates.Contracts;
 using Aggregates.Exceptions;
 using Aggregates.Extensions;
 using Aggregates.Messages;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -16,7 +17,8 @@ namespace Aggregates.Internal
     {
         private readonly ILogger Logger;
 
-        private readonly Configure _settings;
+        private readonly ISettings _settings;
+        private readonly IServiceProvider _provider;
         private readonly IMetrics _metrics;
         private readonly IStoreEvents _eventstore;
         private readonly IStoreSnapshots _snapstore;
@@ -25,10 +27,11 @@ namespace Aggregates.Internal
         private readonly IVersionRegistrar _registrar;
         private readonly ITrackChildren _childTracker;
 
-        public StoreEntities(ILoggerFactory logFactory, Configure settings, IMetrics metrics, IStoreEvents eventstore, IStoreSnapshots snapstore, IOobWriter oobstore, IEventFactory factory, IVersionRegistrar registrar, ITrackChildren childTracker)
+        public StoreEntities(ILoggerFactory logFactory, ISettings settings, IServiceProvider provider, IMetrics metrics, IStoreEvents eventstore, IStoreSnapshots snapstore, IOobWriter oobstore, IEventFactory factory, IVersionRegistrar registrar, ITrackChildren childTracker)
         {
             Logger = logFactory.CreateLogger("StoreEntities");
             _settings = settings;
+            _provider = provider;
             _metrics = metrics;
             _eventstore = eventstore;
             _snapstore = snapstore;
@@ -49,7 +52,7 @@ namespace Aggregates.Internal
         }
         public Task<TEntity> New<TEntity, TState>(string bucket, Id id, IEntity parent) where TEntity : IEntity<TState> where TState : class, IState, new()
         {
-            var uow = (_settings.LocalContainer.Value ?? _settings.Container).Resolve<Aggregates.UnitOfWork.IDomain>();
+            var uow = _provider.GetRequiredService<Aggregates.UnitOfWork.IDomain>();
 
             var factory = EntityFactory.For<TEntity>();
 
@@ -68,7 +71,7 @@ namespace Aggregates.Internal
         }
         public async Task<TEntity> Get<TEntity, TState>(string bucket, Id id, IEntity parent) where TEntity : IEntity<TState> where TState : class, IState, new()
         {
-            var uow = (_settings.LocalContainer.Value ?? _settings.Container).Resolve<Aggregates.UnitOfWork.IDomain>();
+            var uow = _provider.GetRequiredService<Aggregates.UnitOfWork.IDomain>();
 
             var factory = EntityFactory.For<TEntity>();
 
@@ -133,7 +136,7 @@ namespace Aggregates.Internal
                                           ?? new OptimisticConcurrencyAttribute(ConcurrencyConflict.Throw);
 
                     Logger.DebugEvent("ConflictResolve", "[{EntityId:l}] entity [{EntityType:l}] resolving {ConflictingEvents} events with {ConflictResolver}", entity.Id, typeof(TEntity).FullName, entity.Uncommitted.Count(), conflictResolution.Conflict);
-                    var strategy = conflictResolution.Conflict.Build(_settings.Container, conflictResolution.Resolver);
+                    var strategy = conflictResolution.Conflict.Build(_provider, conflictResolution.Resolver);
 
                     commitHeaders[Defaults.ConflictResolvedHeader] = conflictResolution.Conflict.DisplayName;
 

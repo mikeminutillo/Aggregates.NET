@@ -11,6 +11,7 @@ using Aggregates.Contracts;
 using Aggregates.Exceptions;
 using Aggregates.Extensions;
 using Aggregates.Messages;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Aggregates.Internal
@@ -25,7 +26,7 @@ namespace Aggregates.Internal
         private class ThreadParam
         {
             public ILogger Logger { get; set; }
-            public IContainer Container { get; set; }
+            public IServiceProvider Container { get; set; }
             public int MaxRetry { get; set; }
             public CancellationToken Token { get; set; }
         }
@@ -37,18 +38,20 @@ namespace Aggregates.Internal
 
         private readonly int _maxRetry;
 
-        private readonly Configure _settings;
+        private readonly ISettings _settings;
+        private readonly IServiceProvider _provider;
         private readonly IEventStoreConsumer _consumer;
         private readonly IMetrics _metrics;
         private readonly IMessageDispatcher _dispatcher;
 
         private bool _disposed;
 
-        public DelayedSubscriber(ILoggerFactory logFactory, Configure settings, IMetrics metrics, IEventStoreConsumer consumer, IMessageDispatcher dispatcher, int maxRetry)
+        public DelayedSubscriber(ILoggerFactory logFactory, ISettings settings, IServiceProvider provider, IMetrics metrics, IEventStoreConsumer consumer, IMessageDispatcher dispatcher, int maxRetry)
         {
             Logger = logFactory.CreateLogger("DelaySubscriber");
             SlowLogger = logFactory.CreateLogger("Slow Alarm");
             _settings = settings;
+            _provider = provider;
             _metrics = metrics;
             _consumer = consumer;
             _dispatcher = dispatcher;
@@ -74,7 +77,7 @@ namespace Aggregates.Internal
 
             _delayedThread = new Thread(Threaded)
             { IsBackground = true, Name = $"Delayed Event Thread" };
-            _delayedThread.Start(new ThreadParam { Logger = Logger, Container = _settings.Container, Token = _cancelation.Token, MaxRetry = _maxRetry });
+            _delayedThread.Start(new ThreadParam { Logger = Logger, Container = _provider, Token = _cancelation.Token, MaxRetry = _maxRetry });
         }
         public Task Shutdown()
         {
@@ -107,10 +110,10 @@ namespace Aggregates.Internal
             var container = param.Container;
 
             var logger = param.Logger;
-            var metrics = container.Resolve<IMetrics>();
-            var consumer = container.Resolve<IEventStoreConsumer>();
-            var dispatcher = container.Resolve<IMessageDispatcher>();
-            var logFactory = container.Resolve<ILoggerFactory>();
+            var metrics = container.GetRequiredService<IMetrics>();
+            var consumer = container.GetRequiredService<IEventStoreConsumer>();
+            var dispatcher = container.GetRequiredService<IMessageDispatcher>();
+            var logFactory = container.GetRequiredService<ILoggerFactory>();
 
             var random = new Random();
 

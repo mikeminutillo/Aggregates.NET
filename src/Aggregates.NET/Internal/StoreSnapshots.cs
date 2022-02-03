@@ -19,7 +19,7 @@ namespace Aggregates.Internal
         private readonly IVersionRegistrar _registrar;
         private readonly StreamIdGenerator _streamGen;
 
-        public StoreSnapshots(ILoggerFactory logFactory, Configure settings, IMetrics metrics, IStoreEvents store, ISnapshotReader snapshots, IVersionRegistrar registrar)
+        public StoreSnapshots(ILoggerFactory logFactory, ISettings settings, IMetrics metrics, IStoreEvents store, ISnapshotReader snapshots, IVersionRegistrar registrar)
         {
             Logger = logFactory.CreateLogger("StoreSnapshots");
             _metrics = metrics;

@@ -16,7 +16,7 @@ namespace Aggregates
     public abstract class Test
     {
         protected IFixture Fixture { get; private set; }
-        protected Configure Settings { get; private set; }
+        protected ISettings settings { get; private set; }
         
         public Test()
         {

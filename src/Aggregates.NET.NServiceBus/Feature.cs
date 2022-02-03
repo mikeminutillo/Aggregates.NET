@@ -2,6 +2,7 @@
 using Aggregates.Extensions;
 using Aggregates.Internal;
 using Aggregates.Messages;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NServiceBus;
 using NServiceBus.Features;
@@ -28,15 +29,12 @@ namespace Aggregates
         protected override void Setup(FeatureConfigurationContext context)
         {
             var settings = context.Settings;
-            var aggSettings = settings.Get<Configure>(NSBDefaults.AggregatesSettings);
-            var container = aggSettings.Container;
+            var aggSettings = settings.Get<ISettings>(NSBDefaults.AggregatesSettings);
 
             context.Pipeline.Register<ExceptionRejectorRegistration>();
 
             if (!aggSettings.Passive)
             {
-                MutationManager.RegisterMutator("domain unit of work", typeof(UnitOfWork.IDomain));
-
 
                 context.Pipeline.Register<UowRegistration>();
                 context.Pipeline.Register<CommandAcceptorRegistration>();
@@ -47,7 +45,7 @@ namespace Aggregates
 
                 // bulk invoke only possible with consumer feature because it uses the eventstore as a sink when overloaded
                 context.Pipeline.Replace("InvokeHandlers", (b) =>
-                    new BulkInvokeHandlerTerminator(b.Build<ILoggerFactory>(), b.Build<IMetrics>(), b.Build<IEventMapper>()),
+                    new BulkInvokeHandlerTerminator(b.Build<ILoggerFactory>(), b.Build<IServiceProvider>(), b.Build<IMetrics>(), b.Build<IEventMapper>()),
                     "Replaces default invoke handlers with one that supports our custom delayed invoker");
             }
 
@@ -64,7 +62,7 @@ namespace Aggregates
 
             // Register all service handlers in my IoC so query processor can use them
             foreach (var type in types.Where(IsServiceHandler))
-                container.Register(type, Lifestyle.PerInstance);
+                context.Container.ConfigureComponent(type, DependencyLifecycle.InstancePerCall);
 
             context.Pipeline.Register<MutateIncomingRegistration>();
             context.Pipeline.Register<MutateOutgoingRegistration>();
@@ -73,7 +71,7 @@ namespace Aggregates
             context.Pipeline.Remove("EnforceSendBestPractices");
 
 
-            context.RegisterStartupTask(builder => new EndpointRunner(context.Settings.InstanceSpecificQueue(), aggSettings, aggSettings.StartupTasks, aggSettings.ShutdownTasks));
+            context.RegisterStartupTask(builder => new EndpointRunner(builder.Build<IServiceProvider>(), context.Settings.InstanceSpecificQueue(), aggSettings));
         }
         private static bool IsServiceHandler(Type type)
         {
@@ -90,25 +88,23 @@ namespace Aggregates
     [ExcludeFromCodeCoverage]
     class EndpointRunner : FeatureStartupTask
     {
+        private readonly IServiceProvider _provider;
         private readonly String _instanceQueue;
-        private readonly Configure _config;
-        private readonly IEnumerable<Func<Configure, Task>> _startupTasks;
-        private readonly IEnumerable<Func<Configure, Task>> _shutdownTasks;
+        private readonly ISettings _settings;
 
-        public EndpointRunner(String instanceQueue, Configure config, IEnumerable<Func<Configure, Task>> startupTasks, IEnumerable<Func<Configure, Task>> shutdownTasks)
+        public EndpointRunner(IServiceProvider provider, string instanceQueue, ISettings settings)
         {
+            _provider = provider;
             _instanceQueue = instanceQueue;
-            _config = config;
-            _startupTasks = startupTasks;
-            _shutdownTasks = shutdownTasks;
+            _settings = settings;
         }
         protected override async Task OnStart(IMessageSession session)
         {
-            var logFactory = _config.Container.Resolve<ILoggerFactory>();
+            var logFactory = _provider.GetRequiredService<ILoggerFactory>();
             var logger = logFactory.CreateLogger("EndpointRunner");
 
             // Subscribe to BulkMessage, because it wraps messages and is not used in a handler directly
-            if (!_config.Passive)
+            if (!_settings.Passive)
                 await session.Subscribe<BulkMessage>().ConfigureAwait(false);
 
             logger.InfoEvent("Startup", "Starting on {Queue}", _instanceQueue);
@@ -122,12 +118,12 @@ namespace Aggregates
             // Don't stop the bus from completing setup
             ThreadPool.QueueUserWorkItem(_ =>
             {
-                _startupTasks.WhenAllAsync(x => x(_config)).Wait();
+                Configure.StartupTasks.WhenAllAsync(x => x(_provider, _settings)).Wait();
             });
         }
         protected override async Task OnStop(IMessageSession session)
         {
-            var logFactory = _config.Container.Resolve<ILoggerFactory>();
+            var logFactory = _provider.GetRequiredService<ILoggerFactory>();
             var logger = logFactory.CreateLogger("EndpointRunner");
 
             logger.InfoEvent("Shutdown", "Stopping on {Queue}", _instanceQueue);
@@ -137,7 +133,7 @@ namespace Aggregates
                 x.Instance = Defaults.Instance;
             }).ConfigureAwait(false);
 
-            await _shutdownTasks.WhenAllAsync(x => x(_config)).ConfigureAwait(false);
+            await Configure.ShutdownTasks.WhenAllAsync(x => x(_provider, _settings)).ConfigureAwait(false);
         }
     }
 }

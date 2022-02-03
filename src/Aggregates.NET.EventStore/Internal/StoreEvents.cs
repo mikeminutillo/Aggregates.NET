@@ -12,6 +12,7 @@ using Aggregates.Extensions;
 using Aggregates.Messages;
 using EventStore.ClientAPI;
 using EventStore.ClientAPI.Exceptions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Aggregates.Internal
@@ -21,7 +22,8 @@ namespace Aggregates.Internal
     {
         private readonly Microsoft.Extensions.Logging.ILogger Logger;
         private readonly Microsoft.Extensions.Logging.ILogger SlowLogger;
-        private readonly Configure _settings;
+        private readonly ISettings _settings;
+        private readonly IServiceProvider _provider;
         private readonly IMetrics _metrics;
         private readonly IMessageSerializer _serializer;
         private readonly IEventMapper _mapper;
@@ -31,9 +33,10 @@ namespace Aggregates.Internal
         private readonly int _readsize;
         private readonly Compression _compress;
 
-        public StoreEvents(ILoggerFactory factory, Configure settings, IMetrics metrics, IMessageSerializer serializer, IEventMapper mapper, IVersionRegistrar registrar, IEventStoreConnection[] connections)
+        public StoreEvents(ILoggerFactory factory, ISettings settings, IServiceProvider provider, IMetrics metrics, IMessageSerializer serializer, IEventMapper mapper, IVersionRegistrar registrar, IEventStoreConnection[] connections)
         {
             _settings = settings;
+            _provider = provider;
             _metrics = metrics;
             _serializer = serializer;
             _mapper = mapper;
@@ -290,29 +293,15 @@ namespace Aggregates.Internal
         public Task<long> WriteEvents(string stream, IFullEvent[] events,
             IDictionary<string, string> commitHeaders, long? expectedVersion = null)
         {
-            var mutators = MutationManager.Registered.ToList();
+            var mutators = _provider.GetServices<IMutate>();
 
             var translatedEvents = events.Select(e =>
             {
                 IMutating mutated = new Mutating(e.Event, e.Descriptor.Headers ?? new Dictionary<string, string>());
 
-                // use async local container first if one exists
-                // (is set by unit of work - it creates a child container which mutators might need)
-                IContainer container = _settings.LocalContainer.Value;
-                if (container == null)
-                    container = _settings.Container;
-
-                foreach (var type in mutators)
-                {
-                    var mutator = (IMutate)container.TryResolve(type);
-                    if (mutator == null)
-                    {
-                        Logger.WarnEvent("MutateFailure", "Failed to construct mutator {Mutator}", type.FullName);
-                        continue;
-                    }
-
+                foreach (var mutator in mutators)
                     mutated = mutator.MutateOutgoing(mutated);
-                }
+
                 var mappedType = e.Event.GetType();
                 if (!mappedType.IsInterface)
                     mappedType = _mapper.GetMappedTypeFor(mappedType) ?? mappedType;

@@ -22,7 +22,7 @@ namespace Aggregates.Internal
 
         private static readonly ConcurrentDictionary<string, int> DaysToLiveKnowns = new ConcurrentDictionary<string, int>();
 
-        public OobWriter(ILoggerFactory logFactory, Configure settings, IMessageDispatcher dispatcher, IStoreEvents store, IVersionRegistrar registrar)
+        public OobWriter(ILoggerFactory logFactory, ISettings settings, IMessageDispatcher dispatcher, IStoreEvents store, IVersionRegistrar registrar)
         {
             Logger = logFactory.CreateLogger("OobWriter");
             _dispatcher = dispatcher;

@@ -2,6 +2,7 @@
 using Aggregates.Extensions;
 using Aggregates.Internal;
 using EventStore.ClientAPI;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -17,58 +18,58 @@ namespace Aggregates
     {
         public static Configure EventStore(this Configure config, params IEventStoreConnection[] connections)
         {
-            config.RegistrationTasks.Add((c) =>
+            Configure.RegistrationTasks.Add((container, settings) =>
             {
-                var container = c.Container;
 
-                container.Register<IEventStoreConsumer>((factory) =>
+                container.AddSingleton<IEventStoreConsumer>((factory) =>
                     new EventStoreConsumer(
-                        factory.Resolve<ILoggerFactory>(),
-                        factory.Resolve<Configure>(),
-                        factory.Resolve<IMetrics>(),
-                        factory.Resolve<IMessageSerializer>(),
-                        factory.Resolve<IVersionRegistrar>(),
+                        factory.GetRequiredService<ILoggerFactory>(),
+                        factory.GetRequiredService<ISettings>(),
+                        factory.GetRequiredService<IMetrics>(),
+                        factory.GetRequiredService<IMessageSerializer>(),
+                        factory.GetRequiredService<IVersionRegistrar>(),
                         connections,
-                        factory.Resolve<IEventMapper>()
-                        ), Lifestyle.Singleton);
-                container.Register<IStoreEvents>((factory) =>
+                        factory.GetRequiredService<IEventMapper>()
+                        ));
+                container.AddSingleton<IStoreEvents>((factory) =>
                     new StoreEvents(
-                        factory.Resolve<ILoggerFactory>(),
-                        factory.Resolve<Configure>(),
-                        factory.Resolve<IMetrics>(),
-                        factory.Resolve<IMessageSerializer>(),
-                        factory.Resolve<IEventMapper>(),
-                        factory.Resolve<IVersionRegistrar>(),
+                        factory.GetRequiredService<ILoggerFactory>(),
+                        factory.GetRequiredService<ISettings>(),
+                        factory.GetRequiredService<IServiceProvider>(),
+                        factory.GetRequiredService<IMetrics>(),
+                        factory.GetRequiredService<IMessageSerializer>(),
+                        factory.GetRequiredService<IEventMapper>(),
+                        factory.GetRequiredService<IVersionRegistrar>(),
                         connections
-                        ), Lifestyle.Singleton);
+                        ));
 
                 return Task.CompletedTask;
             });
 
             // These tasks are needed for any endpoint connected to the eventstore
             // Todo: when implementing another eventstore, dont copy this, do it a better way
-            config.StartupTasks.Add(async (c) =>
+            Configure.StartupTasks.Add(async (provider, settings) =>
             {
-                var subscribers = c.Container.ResolveAll<IEventSubscriber>();
+                var subscribers = provider.GetServices<IEventSubscriber>();
 
                 await subscribers.WhenAllAsync(x => x.Setup(
-                    c.Endpoint,
+                    settings.Endpoint,
                     Assembly.GetEntryAssembly().GetName().Version)
                 ).ConfigureAwait(false);
 
                 await subscribers.WhenAllAsync(x => x.Connect()).ConfigureAwait(false);
 
                 // Only setup children projection if client wants it
-                if (c.TrackChildren)
+                if (settings.TrackChildren)
                 {
-                    var tracker = c.Container.Resolve<ITrackChildren>();
-                    await tracker.Setup(c.Endpoint, Assembly.GetEntryAssembly().GetName().Version).ConfigureAwait(false);
+                    var tracker = provider.GetService<ITrackChildren>();
+                    await tracker.Setup(settings.Endpoint, Assembly.GetEntryAssembly().GetName().Version).ConfigureAwait(false);
                 }
 
             });
-            config.ShutdownTasks.Add(async (c) =>
+            Configure.ShutdownTasks.Add(async (container, settings) =>
             {
-                var subscribers = c.Container.ResolveAll<IEventSubscriber>();
+                var subscribers = container.GetServices<IEventSubscriber>();
 
                 await subscribers.WhenAllAsync(x => x.Shutdown()).ConfigureAwait(false);
             });

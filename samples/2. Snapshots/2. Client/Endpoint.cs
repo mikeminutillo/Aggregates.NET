@@ -98,7 +98,7 @@ namespace Client
                         Log.Warning("<{EventId:l}> Command rejected due to: {Message}", "Rejection", rejection.Message);
                     }
                 }
-
+                
             } while (running);
 
             bus.Stop().Wait();

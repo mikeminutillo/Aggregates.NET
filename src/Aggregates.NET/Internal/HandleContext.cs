@@ -9,7 +9,7 @@ namespace Aggregates.Internal
     [ExcludeFromCodeCoverage]
     class HandleContext : IServiceContext
     {
-        public HandleContext(Aggregates.UnitOfWork.IDomain domain, Aggregates.UnitOfWork.IApplication app, IProcessor processor, IContainer container)
+        public HandleContext(Aggregates.UnitOfWork.IDomain domain, Aggregates.UnitOfWork.IApplication app, IProcessor processor, IServiceProvider container)
         {
             Domain = domain;
             App = app;
@@ -20,7 +20,7 @@ namespace Aggregates.Internal
         public Aggregates.UnitOfWork.IDomain Domain { get; }
         public Aggregates.UnitOfWork.IApplication App { get; }
         public IProcessor Processor { get; }
-        public IContainer Container { get; }
+        public IServiceProvider Container { get; }
 
     }
 }

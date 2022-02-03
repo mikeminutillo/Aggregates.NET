@@ -6,6 +6,7 @@ using Aggregates.Contracts;
 using Aggregates.Internal;
 using System.Threading.Tasks;
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Aggregates
 {
@@ -17,11 +18,9 @@ namespace Aggregates
             extraConverters = extraConverters ?? new JsonConverter[] { };
 
             config.MessageContentType = "json";
-            config.RegistrationTasks.Add((c) =>
-            {
-                var container = c.Container;
-                                
-                container.Register<IMessageSerializer>((factory) => new JsonMessageSerializer(factory.Resolve<IEventMapper>(), factory.Resolve<IEventFactory>(), extraConverters), Lifestyle.Singleton);
+            Configure.RegistrationTasks.Add((container, settings) =>
+            {                                
+                container.AddSingleton<IMessageSerializer>((factory) => new JsonMessageSerializer(factory.GetRequiredService<IEventMapper>(), factory.GetRequiredService<IEventFactory>(), extraConverters));
 
                 return Task.CompletedTask;
             });

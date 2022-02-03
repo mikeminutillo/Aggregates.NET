@@ -12,6 +12,7 @@ using Aggregates.Contracts;
 using Aggregates.Exceptions;
 using Aggregates.Extensions;
 using Aggregates.Messages;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Aggregates.Internal
@@ -26,7 +27,7 @@ namespace Aggregates.Internal
         private class ThreadParam
         {
             public ILogger Logger { get; set; }
-            public IContainer Container { get; set; }
+            public IServiceProvider Container { get; set; }
             public int Concurrency { get; set; }
             public CancellationToken Token { get; set; }
             public IMessaging Messaging { get; set; }
@@ -39,7 +40,8 @@ namespace Aggregates.Internal
         private string _endpoint;
         private Version _version;
 
-        private readonly Configure _settings;
+        private readonly ISettings _settings;
+        private readonly IServiceProvider _provider;
         private readonly IMetrics _metrics;
         private readonly IMessaging _messaging;
         private readonly int _concurrency;
@@ -51,10 +53,11 @@ namespace Aggregates.Internal
         private bool _disposed;
 
 
-        public EventSubscriber(ILoggerFactory logFactory, Configure settings, IMetrics metrics, IMessaging messaging, IEventStoreConsumer consumer, IVersionRegistrar registrar, int concurrency, bool allEvents)
+        public EventSubscriber(ILoggerFactory logFactory, ISettings settings, IServiceProvider provider, IMetrics metrics, IMessaging messaging, IEventStoreConsumer consumer, IVersionRegistrar registrar, int concurrency, bool allEvents)
         {
             Logger = logFactory.CreateLogger("EventSubscriber");
             _settings = settings;
+            _provider = provider;
             _metrics = metrics;
             _messaging = messaging;
             _consumer = consumer;
@@ -131,7 +134,7 @@ when({{
                 _pinnedThreads[i] = new Thread(Threaded)
                 { IsBackground = true, Name = $"Event Thread {i}" };
 
-                _pinnedThreads[i].Start(new ThreadParam { Logger = Logger, Container = _settings.Container, Token = _cancelation.Token, Messaging = _messaging, Concurrency = _concurrency, Index = i });
+                _pinnedThreads[i].Start(new ThreadParam { Logger = Logger, Container = _provider, Token = _cancelation.Token, Messaging = _messaging, Concurrency = _concurrency, Index = i });
             }
 
 
@@ -166,9 +169,9 @@ when({{
 
             var container = param.Container;
 
-            var metrics = container.Resolve<IMetrics>();
-            var consumer = container.Resolve<IEventStoreConsumer>();
-            var dispatcher = container.Resolve<IMessageDispatcher>();
+            var metrics = container.GetRequiredService<IMetrics>();
+            var consumer = container.GetRequiredService<IEventStoreConsumer>();
+            var dispatcher = container.GetRequiredService<IMessageDispatcher>();
             var logger = param.Logger;
 
             try

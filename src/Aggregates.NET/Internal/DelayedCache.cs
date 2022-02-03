@@ -116,7 +116,7 @@ namespace Aggregates.Internal
         private int _tooLarge;
         private bool _disposed;
 
-        public DelayedCache(ILoggerFactory logFactory, Configure settings, IMetrics metrics, IStoreEvents store, IVersionRegistrar registrar, IRandomProvider random, ITimeProvider time)
+        public DelayedCache(ILoggerFactory logFactory, ISettings settings, IMetrics metrics, IStoreEvents store, IVersionRegistrar registrar, IRandomProvider random, ITimeProvider time)
         {
             Logger = logFactory.CreateLogger("DelayedCache");
             _metrics = metrics;

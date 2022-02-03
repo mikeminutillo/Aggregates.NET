@@ -11,6 +11,6 @@ namespace Aggregates
         Aggregates.UnitOfWork.IApplication App { get; }
         Aggregates.Contracts.IProcessor Processor { get; }
 
-        IContainer Container { get; }
+        IServiceProvider Container { get; }
     }
 }
