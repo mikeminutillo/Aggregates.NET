@@ -119,7 +119,6 @@ namespace Aggregates.Internal
         protected readonly TestableDomain _uow;
         protected readonly IdRegistry _ids;
         protected readonly TestableEventFactory _factory;
-        protected readonly TestableOobWriter _oobStore;
         protected readonly TestableEventStore _eventstore;
         protected readonly TestableSnapshotStore _snapstore;
         protected readonly TestableVersionRegistrar _registrar;
@@ -131,7 +130,6 @@ namespace Aggregates.Internal
             _uow = uow;
             _ids = ids;
             _factory = new TestableEventFactory(new MessageMapper());
-            _oobStore = new TestableOobWriter();
             _eventstore = new TestableEventStore();
             _snapstore = new TestableSnapshotStore();
             _registrar = new TestableVersionRegistrar();
@@ -193,7 +191,6 @@ namespace Aggregates.Internal
             (entity as INeedDomainUow).Uow = _uow;
             (entity as INeedEventFactory).EventFactory = _factory;
             (entity as INeedStore).Store = _eventstore;
-            (entity as INeedStore).OobWriter = _oobStore;
             (entity as INeedVersionRegistrar).Registrar = _registrar;
 
             return entity;
@@ -229,7 +226,6 @@ namespace Aggregates.Internal
             (entity as INeedDomainUow).Uow = _uow;
             (entity as INeedEventFactory).EventFactory = _factory;
             (entity as INeedStore).Store = _eventstore;
-            (entity as INeedStore).OobWriter = _oobStore;
             (entity as INeedVersionRegistrar).Registrar = _registrar;
 
             return Task.FromResult(entity);

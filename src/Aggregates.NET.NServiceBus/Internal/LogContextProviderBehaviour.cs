@@ -18,9 +18,9 @@ namespace Aggregates.Internal
 
         private readonly ISettings _settings;
 
-        public LogContextProviderBehaviour(ILoggerFactory logFactory, ISettings settings)
+        public LogContextProviderBehaviour(ILogger<LogContextProviderBehaviour> logger, ISettings settings)
         {
-            Logger = logFactory.CreateLogger("LogContextProvider");
+            Logger = logger;
             _settings = settings;
         }
 
@@ -60,7 +60,7 @@ namespace Aggregates.Internal
             behavior: typeof(LogContextProviderBehaviour),
             description: "Provides useful message information to logger")
         {
-            InsertAfter("LocalMessageUnpack");
+            InsertBefore("MutateIncomingMessages");
         }
     }
 }

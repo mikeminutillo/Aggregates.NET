@@ -80,11 +80,6 @@ namespace Aggregates
             return ShouldSnapshot();
         }
 
-        void IState.Conflict(IEvent @event)
-        {
-            Mutator.Conflict(this, @event);
-        }
-
         void IState.Apply(IEvent @event)
         {
             try

@@ -1,12 +1,13 @@
-﻿using System;
+﻿using Aggregates.Contracts;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Aggregates.Contracts
+namespace Aggregates
 {
     public interface ISettings
     {
-        IServiceProvider ServiceProvider { get; }
+        IConfiguration Configuration { get; }
         Version EndpointVersion { get; }
         Version AggregatesVersion { get; }
 
@@ -22,16 +23,7 @@ namespace Aggregates.Contracts
         // Messaging settings
         string Endpoint { get;  }
         string UniqueAddress { get;  }
-        int Retries { get;  }
-        int ParallelMessages { get;  }
-        int ParallelEvents { get; }
-        int MaxConflictResolves { get; }
 
-        // Delayed cache settings
-        int FlushSize { get; }
-        TimeSpan FlushInterval { get;  }
-        TimeSpan DelayedExpiration { get; }
-        int MaxDelayed { get; }
 
         bool AllEvents { get; }
         bool Passive { get; }

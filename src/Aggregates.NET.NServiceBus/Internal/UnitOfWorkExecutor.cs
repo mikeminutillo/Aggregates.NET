@@ -53,7 +53,6 @@ namespace Aggregates.Internal
                 }
 
                 var domainUOW = _provider.GetRequiredService<Aggregates.UnitOfWork.IDomain>();
-                var delayed = _provider.GetService<IDelayedChannel>();
                 Aggregates.UnitOfWork.IApplication appUOW = null;
 
                 // IUnitOfWork might not be defined by user
@@ -69,7 +68,8 @@ namespace Aggregates.Internal
                 // Set into the context because DI can be slow
                 context.Extensions.Set(domainUOW);
                 context.Extensions.Set(appUOW);
-
+                context.Extensions.Set(_settings);
+                context.Extensions.Set(_settings.Configuration);
 
                 var commitableUow = domainUOW as Aggregates.UnitOfWork.IUnitOfWork;
                 var commitableAppUow = appUOW as Aggregates.UnitOfWork.IUnitOfWork;
@@ -83,7 +83,6 @@ namespace Aggregates.Internal
 
                         if (commitableAppUow != null)
                             await commitableAppUow.Begin().ConfigureAwait(false);
-                        await delayed.Begin().ConfigureAwait(false);
 
                         await next().ConfigureAwait(false);
 
@@ -91,7 +90,6 @@ namespace Aggregates.Internal
                             await commitableUow.End().ConfigureAwait(false);
                         if (commitableAppUow != null)
                             await commitableAppUow.End().ConfigureAwait(false);
-                        await delayed.End().ConfigureAwait(false);
                     }
 
                 }
@@ -111,7 +109,6 @@ namespace Aggregates.Internal
                             await commitableAppUow.End(e).ConfigureAwait(false);
                             Bags.TryAdd(context.MessageId, appUOW.Bag);
                         }
-                        await delayed.End(e).ConfigureAwait(false);
                     }
                     catch (Exception endException)
                     {

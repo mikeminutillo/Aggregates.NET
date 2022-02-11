@@ -1,5 +1,4 @@
-﻿using Aggregates.Attributes;
-using Aggregates.Contracts;
+﻿using Aggregates.Contracts;
 using Aggregates.Exceptions;
 using Aggregates.Extensions;
 using Aggregates.Messages;
@@ -22,20 +21,18 @@ namespace Aggregates.Internal
         private readonly IMetrics _metrics;
         private readonly IStoreEvents _eventstore;
         private readonly IStoreSnapshots _snapstore;
-        private readonly IOobWriter _oobstore;
         private readonly IEventFactory _factory;
         private readonly IVersionRegistrar _registrar;
         private readonly ITrackChildren _childTracker;
 
-        public StoreEntities(ILoggerFactory logFactory, ISettings settings, IServiceProvider provider, IMetrics metrics, IStoreEvents eventstore, IStoreSnapshots snapstore, IOobWriter oobstore, IEventFactory factory, IVersionRegistrar registrar, ITrackChildren childTracker)
+        public StoreEntities(ILogger<StoreEntities> logger, ISettings settings, IServiceProvider provider, IMetrics metrics, IStoreEvents eventstore, IStoreSnapshots snapstore, IEventFactory factory, IVersionRegistrar registrar, ITrackChildren childTracker)
         {
-            Logger = logFactory.CreateLogger("StoreEntities");
+            Logger = logger;
             _settings = settings;
             _provider = provider;
             _metrics = metrics;
             _eventstore = eventstore;
             _snapstore = snapstore;
-            _oobstore = oobstore;
             _factory = factory;
             _registrar = registrar;
             _childTracker = childTracker;
@@ -63,7 +60,6 @@ namespace Aggregates.Internal
             (entity as INeedDomainUow).Uow = uow;
             (entity as INeedEventFactory).EventFactory = _factory;
             (entity as INeedStore).Store = _eventstore;
-            (entity as INeedStore).OobWriter = _oobstore;
             (entity as INeedVersionRegistrar).Registrar = _registrar;
             (entity as INeedChildTracking).Tracker = _childTracker;
 
@@ -85,7 +81,6 @@ namespace Aggregates.Internal
             (entity as INeedDomainUow).Uow = uow;
             (entity as INeedEventFactory).EventFactory = _factory;
             (entity as INeedStore).Store = _eventstore;
-            (entity as INeedStore).OobWriter = _oobstore;
             (entity as INeedVersionRegistrar).Registrar = _registrar;
             (entity as INeedChildTracking).Tracker = _childTracker;
 
@@ -120,43 +115,13 @@ namespace Aggregates.Internal
             }
             catch (VersionException e)
             {
-                Logger.DebugEvent("VersionConflict", "[{EntityId:l}] entity [{EntityType:l}] version {Version} commit version {CommitVersion} - {StoreMessage}", entity.Id, typeof(TEntity).FullName, state.Version, entity.Version, e.Message);
+                Logger.WarnEvent("VersionConflict", "[{EntityId:l}] entity [{EntityType:l}] version {Version} commit version {CommitVersion} - {StoreMessage}", entity.Id, typeof(TEntity).FullName, state.Version, entity.Version, e.Message);
                 _metrics.Mark("Conflicts", Unit.Items);
                 // If we expected no stream, no reason to try to resolve the conflict
                 if (entity.Version == EntityFactory.NewEntityVersion)
                 {
                     Logger.DebugEvent("AlreadyExists", "[{EntityId:l}] entity [{EntityType:l}] already exists", entity.Id, typeof(TEntity).FullName);
                     throw new EntityAlreadyExistsException<TEntity>(entity.Bucket, entity.Id, entity.GetParentIds());
-                }
-
-                try
-                {
-                    // Todo: cache per entity type
-                    var conflictResolution = (OptimisticConcurrencyAttribute)Attribute.GetCustomAttribute(typeof(TEntity), typeof(OptimisticConcurrencyAttribute))
-                                          ?? new OptimisticConcurrencyAttribute(ConcurrencyConflict.Throw);
-
-                    Logger.DebugEvent("ConflictResolve", "[{EntityId:l}] entity [{EntityType:l}] resolving {ConflictingEvents} events with {ConflictResolver}", entity.Id, typeof(TEntity).FullName, entity.Uncommitted.Count(), conflictResolution.Conflict);
-                    var strategy = conflictResolution.Conflict.Build(_provider, conflictResolution.Resolver);
-
-                    commitHeaders[Defaults.ConflictResolvedHeader] = conflictResolution.Conflict.DisplayName;
-
-                    await strategy.Resolve<TEntity, TState>(entity, commitId, commitHeaders).ConfigureAwait(false);
-
-                    Logger.DebugEvent("ConflictResolveSuccess", "[{EntityId:l}] entity [{EntityType:l}] resolution success", entity.Id, typeof(TEntity).FullName);
-                }
-                catch (AbandonConflictException abandon)
-                {
-                    _metrics.Mark("Conflicts Unresolved", Unit.Items);
-                    Logger.ErrorEvent("ConflictResolveAbandon", "[{EntityId:l}] entity [{EntityType:l}] abandonded", entity.Id, typeof(TEntity).FullName);
-
-                    throw new ConflictResolutionFailedException(entity.GetType(), entity.Bucket, entity.Id, entity.GetParentIds(), "Aborted", abandon);
-                }
-                catch (Exception ex)
-                {
-                    _metrics.Mark("Conflicts Unresolved", Unit.Items);
-                    Logger.ErrorEvent("ConflictResolveFail", ex, "[{EntityId:l}] entity [{EntityType:l}] failed: {ExceptionType} - {ExceptionMessage}", entity.Id, typeof(TEntity).FullName, ex.GetType().Name, ex.Message);
-
-                    throw new ConflictResolutionFailedException(entity.GetType(), entity.Bucket, entity.Id, entity.GetParentIds(), "Exception", ex);
                 }
 
             }
@@ -169,9 +134,6 @@ namespace Aggregates.Internal
 
             try
             {
-                if (oobEvents.Any())
-                    await _oobstore.WriteEvents<TEntity>(entity.Bucket, entity.Id, entity.GetParentIds(), oobEvents, commitId, commitHeaders).ConfigureAwait(false);
-
                 if (entity.State.ShouldSnapshot())
                 {
                     // Notify the entity and state that we are taking a snapshot

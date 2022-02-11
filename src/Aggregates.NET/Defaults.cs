@@ -33,13 +33,7 @@ namespace Aggregates
         public const string SagaHeader = "Aggregates.NET.Saga";
         public const string OriginatingMessageHeader = "Aggregates.NET.OriginatingMessage";
 
-        public const string ConflictResolvedHeader = "ConflictResolver";
-
         public const string AggregatesVersionHeader = "Aggregates.NET.LibraryVersion";
-
-        public const string OobHeaderKey = "Aggregates.OOB";
-        public const string OobTransientKey = "Aggregates.Transient";
-        public const string OobDaysToLiveKey = "Aggregates.DaysToLive";
 
         public const string EndpointHeader = "Endpoint";
         public const string InstanceHeader = "Endpoint.Instance";

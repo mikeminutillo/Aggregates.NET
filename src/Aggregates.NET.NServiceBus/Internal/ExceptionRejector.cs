@@ -17,22 +17,15 @@ namespace Aggregates.Internal
 {
     public class ExceptionRejector : Behavior<IIncomingLogicalMessageContext>
     {
-        private static readonly ConcurrentDictionary<string, int> RetryRegistry = new ConcurrentDictionary<string, int>();
         private readonly ILogger Logger;
 
         private readonly IMetrics _metrics;
-        private readonly DelayedRetry _retry;
-        private readonly IMessageSerializer _serializer;
-        private readonly int _retries;
 
-        public ExceptionRejector(ILoggerFactory logFactory, ISettings settings, IMetrics metrics, IMessageSerializer serializer, DelayedRetry retry)
+        public ExceptionRejector(ILoggerFactory logFactory, ISettings settings, IMetrics metrics)
         {
             Logger = logFactory.CreateLogger("ExceptionRejector");
             _metrics = metrics;
-            _serializer = serializer;
-            _retry = retry;
 
-            _retries = settings.Retries;
         }
 
         public override async Task Invoke(IIncomingLogicalMessageContext context, Func<Task> next)
@@ -42,10 +35,6 @@ namespace Aggregates.Internal
 
             try
             {
-                RetryRegistry.TryRemove(messageId, out retries);
-                context.Headers[Defaults.Retries] = retries.ToString();
-                context.Extensions.Set(Defaults.Retries, retries);
-
                 await next().ConfigureAwait(false);
             }
             catch (Exception e)
@@ -54,33 +43,6 @@ namespace Aggregates.Internal
                 if (e is BusinessException || context.MessageHandled)
                     return;
                 
-                if (retries < _retries || _retries == -1)
-                {
-                    Logger.LogEvent((retries > _retries / 2) ? LogLevel.Warning : LogLevel.Information, "Catch", e, "[{MessageId:l}] will retry {Retries}/{MaxRetries}: {ExceptionType} - {ExceptionMessage}", messageId,
-                        retries, _retries, e.GetType().Name, e.Message);
-
-                    RetryRegistry.TryAdd(messageId, retries + 1);
-
-                    var message = new FullMessage
-                    {
-                        Message = context.Message.Instance as Messages.IMessage,
-                        Headers = context.MessageHeaders.ToDictionary(kv => kv.Key, kv => kv.Value)
-                    };
-
-                    // todo: Not ideal for this to be here -
-                    // but unpacking these headers takes place further down the queue after UOW start
-                    // I don't want to start a new unit of work for each message in a bulk message (defeats the purpose)
-                    // So need to do something a little special here
-                    if (context.Extensions.TryGet(Defaults.BulkHeader, out IFullMessage[] delayedMessages))
-                        message.Message = new BulkMessage { Messages = delayedMessages };
-                    if (context.Extensions.TryGet(Defaults.LocalHeader, out object local))
-                        message.Message = local as Messages.IMessage;
-
-                    _retry.QueueRetry(message, TimeSpan.FromMilliseconds(500));
-                    // retry out of the pipeline so NSB can continue processing other messages & we can delay
-                    //throw;
-                    return;
-                }
 
                 // at this point the message has failed, so a THROW will move it to the error queue
 
@@ -121,7 +83,7 @@ namespace Aggregates.Internal
             stepId: "ExceptionRejector",
             behavior: typeof(ExceptionRejector),
             description: "handles exceptions and retries",
-            factoryMethod: (b) => new ExceptionRejector(b.Build<ILoggerFactory>(), b.Build<Configure>(), b.Build<IMetrics>(), b.Build<IMessageSerializer>(), b.Build<DelayedRetry>())
+            factoryMethod: (b) => new ExceptionRejector(b.Build<ILoggerFactory>(), b.Build<ISettings>(), b.Build<IMetrics>())
         )
         {
             InsertBefore("MutateIncomingMessages");

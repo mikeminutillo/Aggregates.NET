@@ -39,9 +39,9 @@ namespace Aggregates.Internal
         public object CurrentMessage { get; internal set; }
         public IDictionary<string, string> CurrentHeaders { get; internal set; }
 
-        public UnitOfWork(ILoggerFactory logFactory, IRepositoryFactory repoFactory, IEventFactory eventFactory)
+        public UnitOfWork(ILogger<UnitOfWork> logger, IRepositoryFactory repoFactory, IEventFactory eventFactory)
         {
-            Logger = logFactory.CreateLogger("UnitOfWork");
+            Logger = logger;
             _repoFactory = repoFactory;
             _eventFactory = eventFactory;
             _repositories = new Dictionary<string, IRepository>();

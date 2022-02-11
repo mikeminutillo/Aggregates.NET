@@ -40,7 +40,6 @@ namespace Aggregates.Internal
         private string _endpoint;
         private Version _version;
 
-        private readonly ISettings _settings;
         private readonly IServiceProvider _provider;
         private readonly IMetrics _metrics;
         private readonly IMessaging _messaging;
@@ -53,17 +52,19 @@ namespace Aggregates.Internal
         private bool _disposed;
 
 
-        public EventSubscriber(ILoggerFactory logFactory, ISettings settings, IServiceProvider provider, IMetrics metrics, IMessaging messaging, IEventStoreConsumer consumer, IVersionRegistrar registrar, int concurrency, bool allEvents)
+        public EventSubscriber(ILogger<EventSubscriber> logger, IServiceProvider provider, IMetrics metrics, IMessaging messaging, IEventStoreConsumer consumer, IVersionRegistrar registrar, bool allEvents)
         {
-            Logger = logFactory.CreateLogger("EventSubscriber");
-            _settings = settings;
+            Logger = logger;
             _provider = provider;
             _metrics = metrics;
             _messaging = messaging;
             _consumer = consumer;
             _registrar = registrar;
-            _concurrency = concurrency;
             _allEvents = allEvents;
+            // Allowing concurrency creates more problems - trying to simplify for now
+            // perhaps an improvement would be to allow concurrent processing for different event streams..
+            // or maybe allowing some selector which will enable concurrency when entities dont depend on other running events
+            _concurrency = 1;
         }
 
         public async Task Setup(string endpoint, Version version)

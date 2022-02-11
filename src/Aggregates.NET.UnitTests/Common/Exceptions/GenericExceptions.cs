@@ -16,12 +16,6 @@ namespace Aggregates.Common.Exceptions
     public class GenericExceptions : Test
     {
         [Fact]
-        public void ShouldHaveEntityBucketIdAndParentsInConflictResolutionFailedException()
-        {
-            var e = new ConflictResolutionFailedException(typeof(FakeEntity), "testBucket", "testId", new Id[] { "testParent" });
-            e.Message.Should().ContainAll(typeof(FakeEntity).Name, "testBucket", "testId", "testParent");
-        }
-        [Fact]
         public void ShouldHaveProjectionNameExistingAndDesiredDefinition()
         {
             var e = new EndpointVersionException("projectionName", "currentProjection", "desiredProjection");

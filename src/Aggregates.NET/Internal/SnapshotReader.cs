@@ -41,9 +41,9 @@ namespace Aggregates.Internal
         private readonly IEventStoreConsumer _consumer;
         private readonly IMessageSerializer _serializer;
 
-        public SnapshotReader(ILoggerFactory logFactory, IMetrics metrics, IStoreEvents store, IEventStoreConsumer consumer, IMessageSerializer serializer)
+        public SnapshotReader(ILogger<SnapshotReader> logger, IMetrics metrics, IStoreEvents store, IEventStoreConsumer consumer, IMessageSerializer serializer)
         {
-            Logger = logFactory.CreateLogger("SnapshotReader");
+            Logger =  logger;
             _metrics = metrics;
             _store = store;
             _consumer = consumer;

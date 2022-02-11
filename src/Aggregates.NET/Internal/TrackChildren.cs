@@ -23,9 +23,9 @@ namespace Aggregates.Internal
         private readonly IStoreEvents _eventstore;
         private readonly IVersionRegistrar _registrar;
 
-        public TrackChildren(ILoggerFactory logFactory, ISettings settings, IServiceProvider provider, IEventStoreConsumer consumer, IStoreEvents eventstore, IVersionRegistrar registrar)
+        public TrackChildren(ILogger<TrackChildren> logger, ISettings settings, IServiceProvider provider, IEventStoreConsumer consumer, IStoreEvents eventstore, IVersionRegistrar registrar)
         {
-            Logger = logFactory.CreateLogger("TrackChildren");
+            Logger = logger;
             _settings = settings;
             _provider = provider;
             _consumer = consumer;

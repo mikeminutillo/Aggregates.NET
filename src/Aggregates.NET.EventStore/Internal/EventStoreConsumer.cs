@@ -193,7 +193,6 @@ namespace Aggregates.Internal
             {
                 Logger.InfoEvent("PersistentSubscribe", "Persistent [{Stream:l}] group [{Group:l}] store {Store}", stream, group, client.Settings.GossipSeeds[0].EndPoint);
 
-
                 var settings = PersistentSubscriptionSettings.Create()
                     .StartFromBeginning()
                     .WithMaxRetriesOf(5)

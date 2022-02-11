@@ -36,10 +36,10 @@ namespace Aggregates.Internal
 
         private Contracts.IMessaging _messaging;
 
-        public VersionRegistrar(ILoggerFactory logFactory, Contracts.IMessaging messaging)
+        public VersionRegistrar(ILogger<VersionRegistrar> logger, Contracts.IMessaging messaging)
         {
             _messaging = messaging;
-            Logger = logFactory.CreateLogger("VersionRegistrar");
+            Logger = logger;
 
             Load(_messaging.GetMessageTypes());
             Load(_messaging.GetEntityTypes());

@@ -24,27 +24,27 @@ namespace Aggregates.Common.Extensions
         public void ShouldProcessService()
         {
             var context = Fake<IServiceContext>();
-            var container = Fake<IContainer>();
+            var container = Fake<IServiceProvider>();
             var processor = Fake<IProcessor>();
             A.CallTo(() => context.Container).Returns(container);
             A.CallTo(() => context.Processor).Returns(processor);
 
             context.Service<IService<int>, int>(Fake<IService<int>>());
 
-            A.CallTo(() => processor.Process<IService<int>, int>(A<IService<int>>.Ignored, A<IContainer>.Ignored)).MustHaveHappened();
+            A.CallTo(() => processor.Process<IService<int>, int>(A<IService<int>>.Ignored, A<IServiceProvider>.Ignored)).MustHaveHappened();
         }
         [Fact]
         public void ShouldProcessServiceFromFactory()
         {
             var context = Fake<IServiceContext>();
-            var container = Fake<IContainer>();
+            var container = Fake<IServiceProvider>();
             var processor = Fake<IProcessor>();
             A.CallTo(() => context.Container).Returns(container);
             A.CallTo(() => context.Processor).Returns(processor);
 
             context.Service<IService<int>, int>((_) => { });
 
-            A.CallTo(() => processor.Process<IService<int>, int>(A<Action<IService<int>>>.Ignored, A<IContainer>.Ignored)).MustHaveHappened();
+            A.CallTo(() => processor.Process<IService<int>, int>(A<Action<IService<int>>>.Ignored, A<IServiceProvider>.Ignored)).MustHaveHappened();
         }
 
     }

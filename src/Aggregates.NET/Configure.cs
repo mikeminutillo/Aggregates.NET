@@ -48,12 +48,12 @@ namespace Aggregates
                 throw new ArgumentException("Must designate the service collection");
 
             var config = new Configure();
-            settings(config);
-
-
             var aggConfig = new Configuration();
 
             aggConfig.Settings = config;
+            config.Configuration = aggConfig;
+
+            settings(config);
 
             try
             {
@@ -72,8 +72,7 @@ namespace Aggregates
 
     public class Configure : ISettings
     {
-        public IServiceProvider ServiceProvider { get; internal set; }
-
+        public IConfiguration Configuration { get; internal set; }
         public Version EndpointVersion { get; private set; }
         public Version AggregatesVersion { get; private set; }
 
@@ -89,16 +88,6 @@ namespace Aggregates
         // Messaging settings
         public string Endpoint { get; internal set; }
         public string UniqueAddress { get; internal set; }
-        public int Retries { get; internal set; }
-        public int ParallelMessages { get; internal set; }
-        public int ParallelEvents { get; internal set; }
-        public int MaxConflictResolves { get; internal set; }
-
-        // Delayed cache settings
-        public int FlushSize { get; internal set; }
-        public TimeSpan FlushInterval { get; internal set; }
-        public TimeSpan DelayedExpiration { get; internal set; }
-        public int MaxDelayed { get; internal set; }
 
         public bool AllEvents { get; internal set; }
         public bool Passive { get; internal set; }
@@ -132,14 +121,6 @@ namespace Aggregates
             ReadSize = 100;
             Compression = Compression.None;
             UniqueAddress = Guid.NewGuid().ToString("N");
-            Retries = 10;
-            ParallelMessages = 10;
-            ParallelEvents = 10;
-            MaxConflictResolves = 3;
-            FlushSize = 500;
-            FlushInterval = TimeSpan.FromMinutes(1);
-            DelayedExpiration = TimeSpan.FromMinutes(5);
-            MaxDelayed = 5000;
             MessageContentType = "";
 
             RegistrationTasks.Add((container, settings) =>
@@ -160,20 +141,22 @@ namespace Aggregates
                     // DI containers are designed to append registrations if multiple are present
                     //container.Register<UnitOfWork.IDomain, Internal.UnitOfWork>(Lifestyle.UnitOfWork);
 
-                    container.AddScoped<IDelayedChannel, DelayedChannel>();
                     container.AddTransient<IRepositoryFactory, RepositoryFactory>();
-                    container.AddSingleton<IStoreSnapshots, StoreSnapshots>();
-                    container.AddSingleton<ISnapshotReader, SnapshotReader>();
-                    container.AddSingleton<IOobWriter, OobWriter>();
-                    container.AddSingleton<IStoreEntities, StoreEntities>();
-                    container.AddSingleton<IDelayedCache, DelayedCache>();
+                    container.AddTransient<IStoreSnapshots, StoreSnapshots>();
+                    container.AddTransient<IStoreEntities, StoreEntities>();
 
-                    // todo: multiple interfaces are not supported (could be wrong actually GetServices exists)
-                    container.AddSingleton<IEventSubscriber, EventSubscriber>();
-                    container.AddSingleton<IEventSubscriber, DelayedSubscriber>();
-                    container.AddSingleton<IEventSubscriber, EventSubscriber>();
+                    container.AddTransient<IEventSubscriber>(builder => 
+                    new EventSubscriber(
+                        builder.GetRequiredService<ILogger<EventSubscriber>>(), 
+                        builder, 
+                        builder.GetRequiredService<IMetrics>(), 
+                        builder.GetRequiredService<IMessaging>(), 
+                        builder.GetRequiredService<IEventStoreConsumer>(),
+                        builder.GetRequiredService<IVersionRegistrar>(),
+                        settings.AllEvents));
+                    container.AddTransient<ISnapshotReader, SnapshotReader>();
 
-                    container.AddSingleton<ITrackChildren, TrackChildren>();
+                    container.AddTransient<ITrackChildren, TrackChildren>();
 
                 }
                 container.AddSingleton<IMetrics, NullMetrics>();
@@ -236,46 +219,6 @@ namespace Aggregates
         public Configure SetUniqueAddress(string address)
         {
             UniqueAddress = address;
-            return this;
-        }
-        public Configure SetRetries(int retries)
-        {
-            Retries = retries;
-            return this;
-        }
-        public Configure SetParallelMessages(int parallel)
-        {
-            ParallelMessages = parallel;
-            return this;
-        }
-        public Configure SetParallelEvents(int parallel)
-        {
-            ParallelEvents = parallel;
-            return this;
-        }
-        public Configure SetMaxConflictResolves(int attempts)
-        {
-            MaxConflictResolves = attempts;
-            return this;
-        }
-        public Configure SetFlushSize(int size)
-        {
-            FlushSize = size;
-            return this;
-        }
-        public Configure SetFlushInterval(TimeSpan interval)
-        {
-            FlushInterval = interval;
-            return this;
-        }
-        public Configure SetDelayedExpiration(TimeSpan expiration)
-        {
-            DelayedExpiration = expiration;
-            return this;
-        }
-        public Configure SetMaxDelayed(int max)
-        {
-            MaxDelayed = max;
             return this;
         }
         public Configure SetCommandDestination(string destination)

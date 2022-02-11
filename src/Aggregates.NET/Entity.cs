@@ -44,14 +44,12 @@ namespace Aggregates
         private UnitOfWork.IDomain Uow => (this as INeedDomainUow).Uow;
         private IEventFactory Factory => (this as INeedEventFactory).EventFactory;
         private IStoreEvents Store => (this as INeedStore).Store;
-        private IOobWriter OobWriter => (this as INeedStore).OobWriter;
         private IVersionRegistrar VersionRegistrar => (this as INeedVersionRegistrar).Registrar;
         private ITrackChildren ChildrenTracker => (this as INeedChildTracking).Tracker;
 
         UnitOfWork.IDomain INeedDomainUow.Uow { get; set; }
         IEventFactory INeedEventFactory.EventFactory { get; set; }
         IStoreEvents INeedStore.Store { get; set; }
-        IOobWriter INeedStore.OobWriter { get; set; }
         IVersionRegistrar INeedVersionRegistrar.Registrar { get; set; }
         ITrackChildren INeedChildTracking.Tracker { get; set; }
 
@@ -103,13 +101,6 @@ namespace Aggregates
             }
         }
 
-        void IEntity<TState>.Conflict(IEvent @event)
-        {
-            // if conflict handling fails it throws exception
-            State.Conflict(@event);
-            (this as IEntity<TState>).Apply(@event);
-        }
-
         void IEntity<TState>.Apply(IEvent @event)
         {
             State.Apply(@event);
@@ -118,20 +109,6 @@ namespace Aggregates
             _uncommitted.Add(newEvent);
         }
 
-        void IEntity<TState>.Raise(IEvent @event, string id, bool transient, int? daysToLive, bool? single)
-        {
-            var newEvent = FullEventFactory.OOBEvent(VersionRegistrar, Uow, this, @event, id, transient, daysToLive);
-
-            if (single.HasValue && single == true &&
-                _uncommitted.Any(x => x.Descriptor.Headers.ContainsKey(Defaults.OobHeaderKey) && x.Descriptor.Headers[Defaults.OobHeaderKey] == id))
-            {
-                var idx = _uncommitted.IndexOf(
-                    _uncommitted.First(x => x.Descriptor.Headers.ContainsKey(Defaults.OobHeaderKey) && x.Descriptor.Headers[Defaults.OobHeaderKey] == id));
-                _uncommitted[idx] = newEvent;
-            }
-            else
-                _uncommitted.Add(newEvent);
-        }
 
         /// <summary>
         /// Apply a new event to the stream, will be hydrated each future read
@@ -143,19 +120,6 @@ namespace Aggregates
             (this as IEntity<TState>).Apply(instance);
         }
 
-        /// <summary>
-        /// Raise an OOB event - identify the channel with id and the properties
-        /// If the channel is transient (requires no persistence)
-        /// or if the channel is written but has an expiration (daysToLive)
-        /// Single is used if you only ever want to write 1 oob event of this type per transaction
-        /// useful if you are bulk delivering messages and only want 1 oob event raised
-        /// </summary>
-        protected void Raise<TEvent>(Action<TEvent> @event, string id, bool transient = true, int? daysToLive = null, bool? single = null) where TEvent : IEvent
-        {
-            var instance = Factory.Create(@event);
-
-            (this as IEntity<TState>).Raise(instance, id, transient, daysToLive, single);
-        }
 
         /// <summary>
         /// A rule for throwing business exceptions based on state

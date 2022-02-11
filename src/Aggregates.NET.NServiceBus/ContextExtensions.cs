@@ -39,27 +39,27 @@ namespace Aggregates
         public static Task<TResponse> Service<TService, TResponse>(this IMessageHandlerContext context, TService service)
             where TService : class, IService<TResponse>
         {
-            var settings = context.Extensions.Get<ISettings>();
+            var config = context.Extensions.Get<IConfiguration>();
             IProcessor processor;
             if(!context.Extensions.TryGet<IProcessor>(out processor))
-                processor = settings.ServiceProvider.GetRequiredService<IProcessor>();
-            return processor.Process<TService, TResponse>(service, settings.ServiceProvider);
+                processor = config.ServiceProvider.GetRequiredService<IProcessor>();
+            return processor.Process<TService, TResponse>(service, config.ServiceProvider);
         }
         public static Task<TResponse> Service<TService, TResponse>(this IMessageHandlerContext context, Action<TService> service)
             where TService : class, IService<TResponse>
         {
-            var settings = context.Extensions.Get<ISettings>();
+            var config = context.Extensions.Get<IConfiguration>();
             IProcessor processor;
             if (!context.Extensions.TryGet<IProcessor>(out processor))
-                processor = settings.ServiceProvider.GetRequiredService<IProcessor>();
+                processor = config.ServiceProvider.GetRequiredService<IProcessor>();
 
-            return processor.Process<TService, TResponse>(service, settings.ServiceProvider);
+            return processor.Process<TService, TResponse>(service, config.ServiceProvider);
         }
 
         public static Task SendToSelf(this IMessageHandlerContext context, Messages.ICommand command)
         {
-            var settings = context.Extensions.Get<ISettings>();
-            var dispatcher = settings.ServiceProvider.GetRequiredService<IMessageDispatcher>();
+            var config = context.Extensions.Get<IConfiguration>();
+            var dispatcher = config.ServiceProvider.GetRequiredService<IMessageDispatcher>();
 
             var message = new FullMessage
             {

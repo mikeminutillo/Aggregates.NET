@@ -43,13 +43,8 @@ namespace Aggregates
                 // Remove NSBs unit of work since we do it ourselves
                 context.Pipeline.Remove("ExecuteUnitOfWork");
 
-                // bulk invoke only possible with consumer feature because it uses the eventstore as a sink when overloaded
-                context.Pipeline.Replace("InvokeHandlers", (b) =>
-                    new BulkInvokeHandlerTerminator(b.Build<ILoggerFactory>(), b.Build<IServiceProvider>(), b.Build<IMetrics>(), b.Build<IEventMapper>()),
-                    "Replaces default invoke handlers with one that supports our custom delayed invoker");
             }
 
-            context.Pipeline.Register<LocalMessageUnpackRegistration>();
             context.Pipeline.Register<LogContextProviderRegistration>();
 
             if (aggSettings.SlowAlertThreshold.HasValue)
@@ -103,9 +98,6 @@ namespace Aggregates
             var logFactory = _provider.GetRequiredService<ILoggerFactory>();
             var logger = logFactory.CreateLogger("EndpointRunner");
 
-            // Subscribe to BulkMessage, because it wraps messages and is not used in a handler directly
-            if (!_settings.Passive)
-                await session.Subscribe<BulkMessage>().ConfigureAwait(false);
 
             logger.InfoEvent("Startup", "Starting on {Queue}", _instanceQueue);
 

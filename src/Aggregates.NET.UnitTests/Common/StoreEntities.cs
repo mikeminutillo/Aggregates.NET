@@ -3,6 +3,7 @@ using Aggregates.Exceptions;
 using Aggregates.Internal;
 using FakeItEasy;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,6 +19,9 @@ namespace Aggregates.Common
 
         public StoreEntities()
         {
+            var fakeuow = new Fake<Aggregates.UnitOfWork.IDomain>();
+            A.CallTo(() => Provider.GetService(typeof(Aggregates.UnitOfWork.IDomain))).Returns(fakeuow.FakedObject);
+
             Snapstore = Fake<IStoreSnapshots>();
             A.CallTo(() => Snapstore.GetSnapshot<FakeEntity>(A<string>.Ignored, A<Id>.Ignored, A<Id[]>.Ignored)).Returns(Task.FromResult((ISnapshot)null));
             Inject(Snapstore);
@@ -136,18 +140,6 @@ namespace Aggregates.Common
             A.CallTo(() => store.WriteEvents<FakeEntity>(A<string>.Ignored, A<Id>.Ignored, A<Id[]>.Ignored, A<IFullEvent[]>.That.Matches(x => x.Length == 3), A<Dictionary<string, string>>.Ignored, A<long?>.Ignored)).MustHaveHappened();
         }
         [Fact]
-        public async Task ShouldCommitOobEvents()
-        {
-            var writer = Fake<IOobWriter>();
-            Inject(writer);
-            var entity = await Sut.Get<FakeEntity, FakeState>("test", "test", null).ConfigureAwait(false);
-            entity.RaiseEvents(Many<FakeOobEvent.FakeEvent>(), "test");
-
-            await Sut.Commit<FakeEntity, FakeState>(entity, Guid.NewGuid(), new Dictionary<string, string>()).ConfigureAwait(false);
-
-            A.CallTo(() => writer.WriteEvents<FakeEntity>(A<string>.Ignored, A<Id>.Ignored, A<Id[]>.Ignored, A<IFullEvent[]>.That.Matches(x => x.Length == 3), A<Guid>.Ignored, A<Dictionary<string, string>>.Ignored)).MustHaveHappened();
-        }
-        [Fact]
         public async Task ShouldCommitSnapshot()
         {
             var snapstore = Fake<IStoreSnapshots>();
@@ -173,71 +165,7 @@ namespace Aggregates.Common
             var e = await Record.ExceptionAsync(() => Sut.Commit<FakeEntity, FakeState>(entity, Guid.NewGuid(), new Dictionary<string, string>())).ConfigureAwait(false);
             e.Should().BeNull();
         }
-        [Fact]
-        public async Task ShouldNotThrowOnOobEventFailure()
-        {
-            var writer = Fake<IOobWriter>();
-            A.CallTo(() => writer.WriteEvents<FakeEntity>(A<string>.Ignored, A<Id>.Ignored, A<Id[]>.Ignored, A<IFullEvent[]>.Ignored, A<Guid>.Ignored, A<Dictionary<string, string>>.Ignored)).Throws<Exception>();
-            Inject(writer);
-            var entity = await Sut.Get<FakeEntity, FakeState>("test", "test", null).ConfigureAwait(false);
-            entity.RaiseEvents(Many<FakeOobEvent.FakeEvent>(), "test");
 
-            var e = await Record.ExceptionAsync(() => Sut.Commit<FakeEntity, FakeState>(entity, Guid.NewGuid(), new Dictionary<string, string>())).ConfigureAwait(false);
-            e.Should().BeNull();
-        }
-        [Fact]
-        public async Task ShouldResolveConflicts()
-        {
-            var resolver = new FakeResolver();
-            var settings = Fake<Configure>();
-            A.CallTo(() => settings.Container.Resolve(A<Type>.Ignored)).Returns(resolver);
-            var store = Fake<IStoreEvents>();
-            A.CallTo(() => store.WriteEvents<FakeEntity>(A<string>.Ignored, A<Id>.Ignored, A<Id[]>.Ignored, A<IFullEvent[]>.Ignored, A<Dictionary<string, string>>.Ignored, A<long?>.Ignored)).Throws(new VersionException("test", new Exception()));
-            Inject(store);
-            var entity = await Sut.Get<FakeEntity, FakeState>("test", "test", null).ConfigureAwait(false);
-            entity.ApplyEvents(Many<FakeDomainEvent.FakeEvent>());
-
-            await Sut.Commit<FakeEntity, FakeState>(entity, Guid.NewGuid(), new Dictionary<string, string>()).ConfigureAwait(false);
-
-            resolver.WasCalled.Should().BeTrue();
-        }
-
-        [Fact]
-        public async Task ShouldNotResolveConflicts()
-        {
-            var resolver = new FakeResolver();
-            resolver.ShouldSucceed = false;
-            var settings = Fake<Configure>();
-            A.CallTo(() => settings.Container.Resolve(A<Type>.Ignored)).Returns(resolver);
-            var store = Fake<IStoreEvents>();
-            A.CallTo(() => store.WriteEvents<FakeEntity>(A<string>.Ignored, A<Id>.Ignored, A<Id[]>.Ignored, A<IFullEvent[]>.Ignored, A<Dictionary<string, string>>.Ignored, A<long?>.Ignored)).Throws(new VersionException("test", new Exception()));
-            Inject(store);
-            var entity = await Sut.Get<FakeEntity, FakeState>("test", "test", null).ConfigureAwait(false);
-            entity.ApplyEvents(Many<FakeDomainEvent.FakeEvent>());
-
-            var e = await Record.ExceptionAsync(() => Sut.Commit<FakeEntity, FakeState>(entity, Guid.NewGuid(), new Dictionary<string, string>())).ConfigureAwait(false);
-
-            resolver.WasCalled.Should().BeTrue();
-            e.Should().BeOfType<ConflictResolutionFailedException>();
-        }
-        [Fact]
-        public async Task ShouldThrowAbandonAndFailResolveConflicts()
-        {
-            var resolver = new FakeResolver();
-            resolver.ShouldAbandon = true;
-            var settings = Fake<Configure>();
-            A.CallTo(() => settings.Container.Resolve(A<Type>.Ignored)).Returns(resolver);
-            var store = Fake<IStoreEvents>();
-            A.CallTo(() => store.WriteEvents<FakeEntity>(A<string>.Ignored, A<Id>.Ignored, A<Id[]>.Ignored, A<IFullEvent[]>.Ignored, A<Dictionary<string, string>>.Ignored, A<long?>.Ignored)).Throws(new VersionException("test", new Exception()));
-            Inject(store);
-            var entity = await Sut.Get<FakeEntity, FakeState>("test", "test", null).ConfigureAwait(false);
-            entity.ApplyEvents(Many<FakeDomainEvent.FakeEvent>());
-
-            var e = await Record.ExceptionAsync(() => Sut.Commit<FakeEntity, FakeState>(entity, Guid.NewGuid(), new Dictionary<string, string>())).ConfigureAwait(false);
-
-            resolver.WasCalled.Should().BeTrue();
-            e.Should().BeOfType<ConflictResolutionFailedException>();
-        }
         [Fact]
         public async Task ShouldThrowPersistenceException()
         {

@@ -16,14 +16,16 @@ namespace Aggregates
     public abstract class Test
     {
         protected IFixture Fixture { get; private set; }
-        protected ISettings settings { get; private set; }
+        protected ISettings Settings { get; private set; }
+        protected IServiceProvider Provider { get; private set; }
         
         public Test()
         {
             Fixture = new Fixture().Customize(new AutoFakeItEasyCustomization { ConfigureMembers = true });
 
-            Settings = new FakeConfiguration();
-            Fixture.Inject<Configure>(Settings);
+
+            Provider = Fake<IServiceProvider>();
+            Inject(Provider);
             Fixture.Customize<Id>(x => x.FromFactory(() => Guid.NewGuid()));
             Fixture.Customize<IEvent>(x => x.FromFactory(() => new FakeDomainEvent.FakeEvent()));
             Fixture.Customize<FakeEntity>(x => x.FromFactory(() =>
@@ -35,7 +37,6 @@ namespace Aggregates
                 (entity as INeedDomainUow).Uow = Fake<UnitOfWork.IDomain>();
                 (entity as INeedEventFactory).EventFactory = Fake<IEventFactory>();
                 (entity as INeedStore).Store = Fake<IStoreEvents>();
-                (entity as INeedStore).OobWriter = Fake<IOobWriter>();
 
                 return entity;
             }));
@@ -48,7 +49,6 @@ namespace Aggregates
                 (entity as INeedDomainUow).Uow = Fake<UnitOfWork.IDomain>();
                 (entity as INeedEventFactory).EventFactory = Fake<IEventFactory>();
                 (entity as INeedStore).Store = Fake<IStoreEvents>();
-                (entity as INeedStore).OobWriter = Fake<IOobWriter>();
 
                 entity.Parent = Fake<FakeEntity>();
                 return entity;

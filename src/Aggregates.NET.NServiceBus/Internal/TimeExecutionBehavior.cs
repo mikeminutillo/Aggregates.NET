@@ -81,7 +81,7 @@ namespace Aggregates.Internal
         public TimeExecutionRegistration() : base(
             stepId: "Time Execution",
             behavior: typeof(TimeExecutionBehavior),
-            description: "handles exceptions and retries",
+            description: "htimes message processing and logs slow ones",
             factoryMethod: (b) => new TimeExecutionBehavior(b.Build<ILoggerFactory>(), b.Build<Configure>())
         )
         {

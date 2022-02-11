@@ -31,6 +31,7 @@ namespace Aggregates
                 var conventions = endpointConfig.Conventions();
 
                 settings.Set(NSBDefaults.AggregatesSettings, config);
+                settings.Set(NSBDefaults.AggregatesConfiguration, config.Configuration);
 
                 // set the configured endpoint name to the one NSB config was constructed with
                 config.SetEndpointName(settings.Get<string>("NServiceBus.Routing.EndpointName"));
@@ -51,7 +52,6 @@ namespace Aggregates
             Configure.RegistrationTasks.Add((container, settings) =>
             {
 
-                container.AddSingleton<Internal.DelayedRetry>();
                 container.AddSingleton<IEventMapper, EventMapper>();
 
                 container.AddScoped<UnitOfWork.IDomain, NSBUnitOfWork>();
@@ -60,26 +60,16 @@ namespace Aggregates
                 container.AddSingleton<IMessageDispatcher, Dispatcher>();
                 container.AddSingleton<IMessaging, NServiceBusMessaging>();
 
+                container.AddSingleton<IMessageSession>((_) => Bus.Instance);
+
                 var nsbSettings = endpointConfig.GetSettings();
 
-                nsbSettings.Set("Retries", config.Retries);
                 nsbSettings.Set("SlowAlertThreshold", config.SlowAlertThreshold);
                 nsbSettings.Set("CommandDestination", config.CommandDestination);
 
-                // Set immediate retries to 0 - we handle retries ourselves any message which throws should be sent to error queue
-                endpointConfig.Recoverability().Immediate(x =>
-                {
-                    x.NumberOfRetries(0);
-                });
-
-                endpointConfig.Recoverability().Delayed(x =>
-                {
-                    x.NumberOfRetries(0);
-                });
-
 
                 endpointConfig.MakeInstanceUniquelyAddressable(settings.UniqueAddress);
-                endpointConfig.LimitMessageProcessingConcurrencyTo(settings.ParallelMessages);
+                endpointConfig.LimitMessageProcessingConcurrencyTo(1);
                 // NSB doesn't have an endpoint name setter other than the constructor, hack it in
                 nsbSettings.Set("NServiceBus.Routing.EndpointName", settings.Endpoint);
 

@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
-using Aggregates.Attributes;
 using Aggregates.Contracts;
 using Aggregates.Extensions;
 using NServiceBus.MessageInterfaces;

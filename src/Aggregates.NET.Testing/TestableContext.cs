@@ -37,7 +37,6 @@ namespace Aggregates
             _ctx.Extensions.Set<UnitOfWork.IDomain>(UoW);
             _ctx.Extensions.Set<UnitOfWork.IApplication>(App);
             _ctx.Extensions.Set<IProcessor>(Processor);
-            _ctx.Extensions.Set<IContainer>(new TestableContainer());
             
         }
 

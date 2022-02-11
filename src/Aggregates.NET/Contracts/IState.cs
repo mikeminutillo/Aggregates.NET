@@ -20,7 +20,6 @@ namespace Aggregates.Contracts
 
         ILogger Logger { get; set; }
         
-        void Conflict(IEvent @event);
         void Apply(IEvent @event);
 
         void SnapshotRestored();
