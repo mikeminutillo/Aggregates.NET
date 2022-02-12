@@ -77,7 +77,7 @@ namespace Aggregates.Internal
                 container.AddSingleton<ITimeProvider>(new RealTimeProvider());
 
                 // Provide a "default" logger so user doesnt need to provide if they dont want to
-                container.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
+                //container.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
 
                 container.AddTransient<IProcessor, Processor>();
                 container.AddSingleton<IVersionRegistrar, VersionRegistrar>();

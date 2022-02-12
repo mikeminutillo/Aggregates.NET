@@ -26,8 +26,7 @@ namespace Aggregates.Internal
 
         public override async Task Invoke(IIncomingPhysicalMessageContext context, Func<Task> next)
         {
-            string corrId = "";
-            context.MessageHeaders.TryGetValue($"{Defaults.PrefixHeader}.{Defaults.CorrelationIdHeader}", out corrId);
+            context.MessageHeaders.TryGetValue($"{Defaults.PrefixHeader}.{Defaults.CorrelationIdHeader}", out var corrId);
 
             if (string.IsNullOrEmpty(corrId))
                 corrId = context.MessageId;
@@ -63,7 +62,7 @@ namespace Aggregates.Internal
             behavior: typeof(LogContextProviderBehaviour),
             description: "Provides useful scope information to logger")
         {
-            InsertBefore("MutateIncomingMessages");
+            InsertBefore("MutateIncomingTransportMessage");
         }
     }
 }

@@ -76,28 +76,19 @@ namespace Aggregates
                 // NSB doesn't have an endpoint name setter other than the constructor, hack it in
                 nsbSettings.Set("NServiceBus.Routing.EndpointName", settings.Endpoint);
 
-                startableEndpoint = EndpointWithExternallyManagedServiceProvider.Create(endpointConfig, container);
-
-                return Task.CompletedTask;
-            });
-
-            // Split creating the endpoint and starting the endpoint into 2 seperate jobs for certain (MICROSOFT) DI setup
-
-            Settings.SetupTasks.Add((container, settings) =>
-            {
-                var loggerFactory = container.GetRequiredService<ILoggerFactory>();
-                var logger = loggerFactory.CreateLogger("Recoverability");
-
                 var recoverability = endpointConfig.Recoverability();
-                recoverability.Failed(settings =>
+                recoverability.Failed(recovery =>
                 {
-                    settings.OnMessageSentToErrorQueue(message =>
+                    recovery.OnMessageSentToErrorQueue(message =>
                     {
+                        var loggerFactory = settings.Configuration.ServiceProvider.GetRequiredService<ILoggerFactory>();
+                        var logger = loggerFactory.CreateLogger("Recoverability");
+
                         var ex = message.Exception;
                         var messageText = Encoding.UTF8.GetString(message.Body).MaxLines(10);
-                        logger.ErrorEvent("Fault", ex, "[{MessageId:l}] has failed and being sent to error queue [{ErrorQueue}]: {ExceptionType} - {ExceptionMessage}\n{@Body}", 
+                        logger.ErrorEvent("Fault", ex, "[{MessageId:l}] has failed and being sent to error queue [{ErrorQueue}]: {ExceptionType} - {ExceptionMessage}\n{@Body}",
                             message.MessageId, message.ErrorQueue, ex.GetType().Name, ex.Message, messageText);
-                        return Task.CompletedTask;                      
+                        return Task.CompletedTask;
                     });
                 });
 
@@ -105,13 +96,16 @@ namespace Aggregates
                 recoverability.AddUnrecoverableException<BusinessException>();
 
                 // we dont need immediate retries
-                recoverability.Immediate(settings => settings.NumberOfRetries(0));
+                recoverability.Immediate(recovery => recovery.NumberOfRetries(0));
 
-                recoverability.Delayed(settings =>
+                recoverability.Delayed(recovery =>
                 {
-                    settings.NumberOfRetries(config.Retries);
-                    settings.OnMessageBeingRetried(message =>
+                    recovery.NumberOfRetries(config.Retries);
+                    recovery.OnMessageBeingRetried(message =>
                     {
+                        var loggerFactory = settings.Configuration.ServiceProvider.GetRequiredService<ILoggerFactory>();
+                        var logger = loggerFactory.CreateLogger("Recoverability");
+
                         var level = LogLevel.Information;
                         if (message.RetryAttempt > (config.Retries / 2))
                             level = LogLevel.Warning;
@@ -124,6 +118,16 @@ namespace Aggregates
                         return Task.CompletedTask;
                     });
                 });
+
+                startableEndpoint = EndpointWithExternallyManagedServiceProvider.Create(endpointConfig, container);
+
+                return Task.CompletedTask;
+            });
+
+            // Split creating the endpoint and starting the endpoint into 2 seperate jobs for certain (MICROSOFT) DI setup
+
+            Settings.SetupTasks.Add((container, settings) =>
+            {
 
                 return Aggregates.Bus.Start(container, startableEndpoint);
             });
