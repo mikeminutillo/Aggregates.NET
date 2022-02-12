@@ -45,8 +45,8 @@ namespace Aggregates.Internal
                 ["EndpointVersion"] = _settings.EndpointVersion.ToString(),
             };
 
-            // Populate the logging context with useful data from the messaeg
-            using (Logger.BeginScope(properties))
+            // Populate the logging context with useful data from the message
+            using (Logger.BeginContext(properties))
             {
                 Logger.DebugEvent("Start", "Started processing [{MessageId:l}] Corr: [{CorrelationId:l}]", context.MessageId, corrId);
                 await next().ConfigureAwait(false);

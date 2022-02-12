@@ -50,7 +50,7 @@ namespace Aggregates.Internal
         internal static List<Func<IServiceProvider, ISettings, Task>> SetupTasks;
         internal static List<Func<IServiceProvider, ISettings, Task>> StartupTasks;
         internal static List<Func<IServiceProvider, ISettings, Task>> ShutdownTasks;
-                
+
         public Settings()
         {
             EndpointVersion = Assembly.GetEntryAssembly()?.GetName().Version ?? new Version(0, 0, 0);
@@ -92,15 +92,18 @@ namespace Aggregates.Internal
                     container.AddTransient<IStoreSnapshots, StoreSnapshots>();
                     container.AddTransient<IStoreEntities, StoreEntities>();
 
-                    container.AddTransient<IEventSubscriber>(builder => 
-                    new EventSubscriber(
-                        builder.GetRequiredService<ILogger<EventSubscriber>>(), 
-                        builder, 
-                        builder.GetRequiredService<IMetrics>(), 
-                        builder.GetRequiredService<IMessaging>(), 
-                        builder.GetRequiredService<IEventStoreConsumer>(),
-                        builder.GetRequiredService<IVersionRegistrar>(),
-                        settings.AllEvents));
+                    container.AddTransient<IEventSubscriber[]>(builder => new[] {
+                        new EventSubscriber(
+                            builder.GetRequiredService<ILogger<EventSubscriber>>(),
+                            builder,
+                            builder.GetRequiredService<IMetrics>(),
+                            builder.GetRequiredService<IMessaging>(),
+                            builder.GetRequiredService<IEventStoreConsumer>(),
+                            builder.GetRequiredService<IVersionRegistrar>(),
+                            settings.AllEvents),
+                        (IEventSubscriber)builder.GetRequiredService<IStoreSnapshots>()
+                    });
+
                     container.AddTransient<ISnapshotReader, SnapshotReader>();
 
                     container.AddTransient<ITrackChildren, TrackChildren>();

@@ -33,7 +33,7 @@ namespace Aggregates.Internal
         {
             var streamName = _streamGen(_registrar.GetVersionedName(typeof(T)), StreamTypes.Snapshot, bucket, streamId, parents);
 
-            Logger.DebugEvent("Get", "[{Stream:l}]", streamName);
+            Logger.DebugEvent("Get", "Getting snapshot for [{Stream:l}]", streamName);
             if (_snapshots != null)
             {
                 var snapshot = await _snapshots.Retreive(streamName).ConfigureAwait(false);
@@ -46,8 +46,7 @@ namespace Aggregates.Internal
             }
             _metrics.Mark("Snapshot Cache Misses", Unit.Items);
 
-            // Check store directly (this might be a new instance which hasn't caught up to snapshot stream yet
-            
+            // Check store directly (this might be a new instance which hasn't caught up to snapshot stream yet          
 
             var read = await _store.GetEventsBackwards(streamName, StreamPosition.End, 1).ConfigureAwait(false);
 
