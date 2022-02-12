@@ -15,37 +15,28 @@ using System.Threading.Tasks;
 
 namespace Aggregates.Internal
 {
-    public class ExceptionRejector : Behavior<IIncomingLogicalMessageContext>
+    public class FailureReply : Behavior<IIncomingLogicalMessageContext>
     {
         private readonly ILogger Logger;
 
         private readonly IMetrics _metrics;
 
-        public ExceptionRejector(ILoggerFactory logFactory, ISettings settings, IMetrics metrics)
+        public FailureReply(ILogger<FailureReply> logger, IMetrics metrics)
         {
-            Logger = logFactory.CreateLogger("ExceptionRejector");
+            Logger = logger;
             _metrics = metrics;
-
         }
 
         public override async Task Invoke(IIncomingLogicalMessageContext context, Func<Task> next)
         {
-            var messageId = context.MessageId;
-            var retries = 0;
+            await next().ConfigureAwait(false);
 
-            try
-            {
-                await next().ConfigureAwait(false);
-            }
-            catch (Exception e)
+            // Message is destined for error queue
+            if (context.Headers.ContainsKey(NSBDefaults.FailedHeader))
             {
                 // Special exception we dont want to retry or reply
-                if (e is BusinessException || context.MessageHandled)
+                if (context.MessageHandled)
                     return;
-                
-
-                // at this point the message has failed, so a THROW will move it to the error queue
-
                 // Only send reply if the message is a SEND, else we risk endless reply loops as message failures bounce back and forth
                 if (context.GetMessageIntent() != MessageIntentEnum.Send && context.GetMessageIntent() != MessageIntentEnum.Publish)
                     return;
@@ -53,37 +44,40 @@ namespace Aggregates.Internal
                 // At this point message is dead - should be moved to error queue, send message to client that their request was rejected due to error 
                 _metrics.Mark("Message Faults", Unit.Errors);
 
-                Logger.ErrorEvent("Fault", e, "[{MessageId:l}] has failed {Retries} times\n{@Headers}\n{ExceptionType} - {ExceptionMessage}", messageId, retries, context.MessageHeaders, e.GetType().Name, e.Message);
                 // Only need to reply if the client expects it
                 if (!context.MessageHeaders.ContainsKey(Defaults.RequestResponse) || context.MessageHeaders[Defaults.RequestResponse] != "1")
-                    throw;
+                    return;
+
+                var retried = "";
+                context.Headers.TryGetValue(NSBDefaults.RetryHeader, out retried);
 
                 // if part of saga be sure to transfer that header
                 var replyOptions = new ReplyOptions();
                 if (context.MessageHeaders.TryGetValue(Defaults.SagaHeader, out var sagaId))
                     replyOptions.SetHeader(Defaults.SagaHeader, sagaId);
 
+                // reply must be sent immediately
+                replyOptions.RequiredImmediateDispatch();
+
                 // Tell the sender the command was not handled due to a service exception
-                var rejection = context.Builder.Build<Action<Exception, string, Error>>();
+                var rejection = context.Builder.Build<Action<string, string, Error>>();
+                context.Headers.TryGetValue(NSBDefaults.ExceptionTypeHeader, out var exceptionType);
+                context.Headers.TryGetValue(NSBDefaults.ExceptionStack, out var exceptionStack);
                 // Wrap exception in our object which is serializable
-                await context.Reply<Error>((message) => rejection(e,
-                            $"Rejected message after {retries} attempts!", message), replyOptions)
+                await context.Reply<Error>((message) => rejection(exceptionType, exceptionStack, message), replyOptions)
                         .ConfigureAwait(false);
-
-                // Should be the last throw for this message - if RecoveryPolicy is properly set the message will be sent over to error queue
-                throw;
-
             }
+
         }
     }
     [ExcludeFromCodeCoverage]
-    internal class ExceptionRejectorRegistration : RegisterStep
+    internal class FailureReplyRegistration : RegisterStep
     {
-        public ExceptionRejectorRegistration() : base(
-            stepId: "ExceptionRejector",
-            behavior: typeof(ExceptionRejector),
-            description: "handles exceptions and retries",
-            factoryMethod: (b) => new ExceptionRejector(b.Build<ILoggerFactory>(), b.Build<ISettings>(), b.Build<IMetrics>())
+        public FailureReplyRegistration() : base(
+            stepId: "FailureReply",
+            behavior: typeof(FailureReply),
+            description: "notifies client when the command fails",
+            factoryMethod: (b) => new FailureReply(b.Build<ILogger<FailureReply>>(), b.Build<IMetrics>())
         )
         {
             InsertBefore("MutateIncomingMessages");

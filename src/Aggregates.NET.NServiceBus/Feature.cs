@@ -23,26 +23,21 @@ namespace Aggregates
     [ExcludeFromCodeCoverage]
     class Feature : NServiceBus.Features.Feature
     {
-        public Feature()
-        {
-        }
         protected override void Setup(FeatureConfigurationContext context)
         {
             var settings = context.Settings;
             var aggSettings = settings.Get<ISettings>(NSBDefaults.AggregatesSettings);
 
-            context.Pipeline.Register<ExceptionRejectorRegistration>();
+            context.Pipeline.Register<FailureReplyRegistration>();
 
             if (!aggSettings.Passive)
             {
-
                 context.Pipeline.Register<UowRegistration>();
                 context.Pipeline.Register<CommandAcceptorRegistration>();
                 context.Pipeline.Register<SagaBehaviourRegistration>();
 
                 // Remove NSBs unit of work since we do it ourselves
                 context.Pipeline.Remove("ExecuteUnitOfWork");
-
             }
 
             context.Pipeline.Register<LogContextProviderRegistration>();
@@ -51,7 +46,6 @@ namespace Aggregates
                 context.Pipeline.Register<TimeExecutionRegistration>();
             var types = settings.GetAvailableTypes();
 
-            var messageMetadataRegistry = settings.Get<MessageMetadataRegistry>();
             context.Pipeline.Register<MessageIdentifierRegistration>();
             context.Pipeline.Register<MessageDetyperRegistration>();
 
@@ -64,7 +58,6 @@ namespace Aggregates
 
             // We are sending IEvents, which NSB doesn't like out of the box - so turn that check off
             context.Pipeline.Remove("EnforceSendBestPractices");
-
 
             context.RegisterStartupTask(builder => new EndpointRunner(builder.Build<IServiceProvider>(), context.Settings.InstanceSpecificQueue(), aggSettings));
         }
@@ -84,7 +77,7 @@ namespace Aggregates
     class EndpointRunner : FeatureStartupTask
     {
         private readonly IServiceProvider _provider;
-        private readonly String _instanceQueue;
+        private readonly string _instanceQueue;
         private readonly ISettings _settings;
 
         public EndpointRunner(IServiceProvider provider, string instanceQueue, ISettings settings)
@@ -95,9 +88,7 @@ namespace Aggregates
         }
         protected override async Task OnStart(IMessageSession session)
         {
-            var logFactory = _provider.GetRequiredService<ILoggerFactory>();
-            var logger = logFactory.CreateLogger("EndpointRunner");
-
+            var logger = _provider.GetRequiredService<ILogger<EndpointRunner>>();
 
             logger.InfoEvent("Startup", "Starting on {Queue}", _instanceQueue);
 
@@ -110,13 +101,12 @@ namespace Aggregates
             // Don't stop the bus from completing setup
             ThreadPool.QueueUserWorkItem(_ =>
             {
-                Configure.StartupTasks.WhenAllAsync(x => x(_provider, _settings)).Wait();
+                Settings.StartupTasks.WhenAllAsync(x => x(_provider, _settings)).Wait();
             });
         }
         protected override async Task OnStop(IMessageSession session)
         {
-            var logFactory = _provider.GetRequiredService<ILoggerFactory>();
-            var logger = logFactory.CreateLogger("EndpointRunner");
+            var logger = _provider.GetRequiredService<ILogger<EndpointRunner>>();
 
             logger.InfoEvent("Shutdown", "Stopping on {Queue}", _instanceQueue);
             await session.Publish<EndpointDead>(x =>
@@ -125,7 +115,7 @@ namespace Aggregates
                 x.Instance = Defaults.Instance;
             }).ConfigureAwait(false);
 
-            await Configure.ShutdownTasks.WhenAllAsync(x => x(_provider, _settings)).ConfigureAwait(false);
+            await Settings.ShutdownTasks.WhenAllAsync(x => x(_provider, _settings)).ConfigureAwait(false);
         }
     }
 }

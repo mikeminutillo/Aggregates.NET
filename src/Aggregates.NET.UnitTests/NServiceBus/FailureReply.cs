@@ -15,7 +15,7 @@ using Xunit;
 
 namespace Aggregates.NServiceBus
 {
-    public class ExceptionRejector : TestSubject<Internal.ExceptionRejector>
+    public class FailureReply : TestSubject<Internal.FailureReply>
     {
         [Fact]
         public async Task ShouldProcessMessage()

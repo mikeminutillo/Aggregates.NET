@@ -16,13 +16,15 @@ using NServiceBus.Unicast.Messages;
 using NServiceBus.Unicast;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Aggregates.Extensions;
+using Aggregates.Messages;
 
 namespace Aggregates
 {
     [ExcludeFromCodeCoverage]
     public static class NSBConfigure
     {
-        public static Configure NServiceBus(this Configure config, EndpointConfiguration endpointConfig)
+        public static Settings NServiceBus(this Settings config, EndpointConfiguration endpointConfig)
         {
             IStartableEndpointWithExternallyManagedContainer startableEndpoint = null;
 
@@ -46,10 +48,11 @@ namespace Aggregates
 
                 endpointConfig.UseSerialization<Internal.AggregatesSerializer>();
                 endpointConfig.EnableFeature<Feature>();
+
             }
 
 
-            Configure.RegistrationTasks.Add((container, settings) =>
+            Settings.RegistrationTasks.Add((container, settings) =>
             {
 
                 container.AddSingleton<IEventMapper, EventMapper>();
@@ -80,8 +83,48 @@ namespace Aggregates
 
             // Split creating the endpoint and starting the endpoint into 2 seperate jobs for certain (MICROSOFT) DI setup
 
-            Configure.SetupTasks.Add((container, settings) =>
+            Settings.SetupTasks.Add((container, settings) =>
             {
+                var loggerFactory = container.GetRequiredService<ILoggerFactory>();
+                var logger = loggerFactory.CreateLogger("Recoverability");
+
+                var recoverability = endpointConfig.Recoverability();
+                recoverability.Failed(settings =>
+                {
+                    settings.OnMessageSentToErrorQueue(message =>
+                    {
+                        var ex = message.Exception;
+                        var messageText = Encoding.UTF8.GetString(message.Body).MaxLines(10);
+                        logger.ErrorEvent("Fault", ex, "[{MessageId:l}] has failed and being sent to error queue [{ErrorQueue}]: {ExceptionType} - {ExceptionMessage}\n{@Body}", 
+                            message.MessageId, message.ErrorQueue, ex.GetType().Name, ex.Message, messageText);
+                        return Task.CompletedTask;                      
+                    });
+                });
+
+                // business exceptions are permentant and shouldnt be retried
+                recoverability.AddUnrecoverableException<BusinessException>();
+
+                // we dont need immediate retries
+                recoverability.Immediate(settings => settings.NumberOfRetries(0));
+
+                recoverability.Delayed(settings =>
+                {
+                    settings.NumberOfRetries(config.Retries);
+                    settings.OnMessageBeingRetried(message =>
+                    {
+                        var level = LogLevel.Information;
+                        if (message.RetryAttempt > (config.Retries / 2))
+                            level = LogLevel.Warning;
+
+                        var ex = message.Exception;
+
+                        var messageText = Encoding.UTF8.GetString(message.Body).MaxLines(10);
+                        logger.LogEvent(level, "Catch", ex, "[{MessageId:l}] has failed and will retry {Attempts} more times: {ExceptionType} - {ExceptionMessage}\n{@Body}", message.MessageId,
+                            config.Retries - message.RetryAttempt, ex?.GetType().Name, ex?.Message, messageText);
+                        return Task.CompletedTask;
+                    });
+                });
+
                 return Aggregates.Bus.Start(container, startableEndpoint);
             });
 

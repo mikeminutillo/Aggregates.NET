@@ -13,64 +13,9 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Aggregates
+namespace Aggregates.Internal
 {
-    public class Configuration : IConfiguration
-    {
-
-        public IServiceProvider ServiceProvider { get; internal set; }
-
-        public bool Setup => Settings != null;
-        public ISettings Settings { get; internal set; }
-
-        public async Task Start(IServiceProvider serviceProvider)
-        {
-            if (Settings == null)
-                throw new InvalidOperationException("Settings must be built");
-
-            ServiceProvider = serviceProvider;
-
-            try
-            {
-                await Configure.SetupTasks.WhenAllAsync(x => x(serviceProvider, Settings)).ConfigureAwait(false);
-            }
-            catch
-            {
-                Settings = null;
-                throw;
-            }
-        }
-
-
-        public async static Task<IConfiguration> Build(IServiceCollection serviceCollection, Action<Configure> settings)
-        {
-            if (serviceCollection == null)
-                throw new ArgumentException("Must designate the service collection");
-
-            var config = new Configure();
-            var aggConfig = new Configuration();
-
-            aggConfig.Settings = config;
-            config.Configuration = aggConfig;
-
-            settings(config);
-
-            try
-            {
-                serviceCollection.AddSingleton<ISettings>(config);
-                serviceCollection.AddSingleton<IConfiguration>(aggConfig);
-                await Configure.RegistrationTasks.WhenAllAsync(x => x(serviceCollection, config)).ConfigureAwait(false);
-            }
-            catch
-            {
-                throw;
-            }
-            return aggConfig;
-        }
-    }
-
-
-    public class Configure : ISettings
+    public class Settings : ISettings
     {
         public IConfiguration Configuration { get; internal set; }
         public Version EndpointVersion { get; private set; }
@@ -88,6 +33,7 @@ namespace Aggregates
         // Messaging settings
         public string Endpoint { get; internal set; }
         public string UniqueAddress { get; internal set; }
+        public int Retries { get; internal set; }
 
         public bool AllEvents { get; internal set; }
         public bool Passive { get; internal set; }
@@ -105,7 +51,7 @@ namespace Aggregates
         internal static List<Func<IServiceProvider, ISettings, Task>> StartupTasks;
         internal static List<Func<IServiceProvider, ISettings, Task>> ShutdownTasks;
                 
-        public Configure()
+        public Settings()
         {
             EndpointVersion = Assembly.GetEntryAssembly()?.GetName().Version ?? new Version(0, 0, 0);
             AggregatesVersion = Assembly.GetExecutingAssembly()?.GetName().Version ?? new Version(0, 0, 0);
@@ -119,6 +65,7 @@ namespace Aggregates
             // Set sane defaults
             Generator = new StreamIdGenerator((type, streamType, bucket, stream, parents) => $"{streamType}-{bucket}-[{parents.BuildParentsString()}]-{type}-{stream}");
             ReadSize = 100;
+            Retries = 5;
             Compression = Compression.None;
             UniqueAddress = Guid.NewGuid().ToString("N");
             MessageContentType = "";
@@ -163,10 +110,10 @@ namespace Aggregates
 
                 container.AddSingleton<StreamIdGenerator>(Generator);
 
-                container.AddSingleton<Action<Exception, string, Error>>((ex, error, message) =>
+                container.AddSingleton<Action<string, string, Error>>((error, stack, message) =>
                 {
-                    message.Message = $"{message} - {ex.GetType().Name}: {ex.Message}";
-                    message.Trace = ex.AsString();
+                    message.Message = error;
+                    message.Trace = stack;
                 });
 
                 container.AddSingleton<Action<Accept>>((_) =>
@@ -176,7 +123,7 @@ namespace Aggregates
                 container.AddSingleton<Action<BusinessException, Reject>>((ex, message) =>
                 {
                     message.Exception = ex;
-                    message.Message= $"{ex.GetType().Name} - {ex.Message}";
+                    message.Message = ex.Message;
                 });
 
                 return Task.CompletedTask;
@@ -186,42 +133,42 @@ namespace Aggregates
                 return Task.CompletedTask;
             });
         }
-        public Configure SetEndpointName(string endpoint)
+        public Settings SetEndpointName(string endpoint)
         {
             Endpoint = endpoint;
             return this;
         }
-        public Configure SetSlowAlertThreshold(TimeSpan? threshold)
+        public Settings SetSlowAlertThreshold(TimeSpan? threshold)
         {
             SlowAlertThreshold = threshold;
             return this;
         }
-        public Configure SetExtraStats(bool extra)
+        public Settings SetExtraStats(bool extra)
         {
             ExtraStats = extra;
             return this;
         }
-        public Configure SetStreamIdGenerator(StreamIdGenerator generator)
+        public Settings SetStreamIdGenerator(StreamIdGenerator generator)
         {
             Generator = generator;
             return this;
         }
-        public Configure SetReadSize(int readsize)
+        public Settings SetReadSize(int readsize)
         {
             ReadSize = readsize;
             return this;
         }
-        public Configure SetCompression(Compression compression)
+        public Settings SetCompression(Compression compression)
         {
             Compression = compression;
             return this;
         }
-        public Configure SetUniqueAddress(string address)
+        public Settings SetUniqueAddress(string address)
         {
             UniqueAddress = address;
             return this;
         }
-        public Configure SetCommandDestination(string destination)
+        public Settings SetCommandDestination(string destination)
         {
             CommandDestination = destination;
             return this;
@@ -230,42 +177,38 @@ namespace Aggregates
         /// Passive means the endpoint doesn't need a unit of work, it won't process events or commands
         /// </summary>
         /// <returns></returns>
-        public Configure SetPassive()
+        public Settings SetPassive()
         {
             Passive = true;
             return this;
         }
-        public Configure ReceiveAllEvents()
+        public Settings ReceiveAllEvents()
         {
             AllEvents = true;
             return this;
         }
-        public Configure SetTrackChildren(bool track = true)
+        public Settings SetRetries(int retry)
+        {
+            Retries = retry;
+            return this;
+        }
+        public Settings SetTrackChildren(bool track = true)
         {
             TrackChildren = track;
             return this;
         }
-        public Configure SetDevelopmentMode(bool mode = true)
+        public Settings SetDevelopmentMode(bool mode = true)
         {
             DevelopmentMode = mode;
             return this;
         }
 
 
-        public Configure AddMetrics<TImplementation>() where TImplementation : class, IMetrics
+        public Settings AddMetrics<TImplementation>() where TImplementation : class, IMetrics
         {
             RegistrationTasks.Add((container, settings) =>
             {
                 container.AddSingleton<IMetrics, TImplementation>();
-                return Task.CompletedTask;
-            });
-            return this;
-        }
-        public Configure AddLogging(ILoggerFactory factory)
-        {
-            RegistrationTasks.Add((container, settings) =>
-            {
-                container.AddSingleton<ILoggerFactory>(factory);
                 return Task.CompletedTask;
             });
             return this;

@@ -16,9 +16,9 @@ namespace Aggregates
     [ExcludeFromCodeCoverage]
     public static class ESConfigure
     {
-        public static Configure EventStore(this Configure config, params IEventStoreConnection[] connections)
+        public static Settings EventStore(this Settings config, params IEventStoreConnection[] connections)
         {
-            Configure.RegistrationTasks.Add((container, settings) =>
+            Settings.RegistrationTasks.Add((container, settings) =>
             {
 
                 container.AddSingleton<IEventStoreConsumer>((factory) =>
@@ -48,7 +48,7 @@ namespace Aggregates
 
             // These tasks are needed for any endpoint connected to the eventstore
             // Todo: when implementing another eventstore, dont copy this, do it a better way
-            Configure.StartupTasks.Add(async (provider, settings) =>
+            Settings.StartupTasks.Add(async (provider, settings) =>
             {
                 var subscribers = provider.GetServices<IEventSubscriber>();
 
@@ -67,7 +67,7 @@ namespace Aggregates
                 }
 
             });
-            Configure.ShutdownTasks.Add(async (container, settings) =>
+            Settings.ShutdownTasks.Add(async (container, settings) =>
             {
                 var subscribers = container.GetServices<IEventSubscriber>();
 

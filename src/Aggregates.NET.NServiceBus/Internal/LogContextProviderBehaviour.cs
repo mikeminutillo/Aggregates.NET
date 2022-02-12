@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 namespace Aggregates.Internal
 {
     [ExcludeFromCodeCoverage]
-    internal class LogContextProviderBehaviour : Behavior<IIncomingLogicalMessageContext>
+    internal class LogContextProviderBehaviour : Behavior<IIncomingPhysicalMessageContext>
     {
         private readonly ILogger Logger;
 
@@ -24,31 +24,34 @@ namespace Aggregates.Internal
             _settings = settings;
         }
 
-        public override async Task Invoke(IIncomingLogicalMessageContext context, Func<Task> next)
+        public override async Task Invoke(IIncomingPhysicalMessageContext context, Func<Task> next)
         {
-            // Populate the logging context with useful data from the messaeg
-            using (Logger.BeginContext("Instance", Defaults.Instance.ToString()))
+            string corrId = "";
+            context.MessageHeaders.TryGetValue($"{Defaults.PrefixHeader}.{Defaults.CorrelationIdHeader}", out corrId);
+
+            if (string.IsNullOrEmpty(corrId))
+                corrId = context.MessageId;
+
+            var body = Encoding.UTF8.GetString(context.Message.Body);
+
+            var properties = new Dictionary<string, object>
             {
-                string messageId = "";
-                context.MessageHeaders.TryGetValue($"{Defaults.PrefixHeader}.{Defaults.MessageIdHeader}", out messageId);
+                ["Instance"] = Defaults.Instance.ToString(),
+                ["MessageId"] = context.MessageId,
+                // Could body and headers be slow?
+                ["MessageBody"] = body,
+                ["MessageHeaders"] = new Dictionary<string, string>(context.MessageHeaders),
+                ["CorrId"] = corrId,
+                ["Endpoint"] = _settings.Endpoint,
+                ["EndpointVersion"] = _settings.EndpointVersion.ToString(),
+            };
 
-                using (Logger.BeginContext("MessageId", messageId))
-                {
-                    string corrId = "";
-                    context.MessageHeaders.TryGetValue($"{Defaults.PrefixHeader}.{Defaults.CorrelationIdHeader}", out corrId);
-
-                    if (string.IsNullOrEmpty(corrId))
-                        corrId = messageId;
-                    using (Logger.BeginContext("CorrId", corrId))
-                    {
-                        using (Logger.BeginContext("Endpoint", _settings.Endpoint))
-                        {
-                            Logger.DebugEvent("Start", "Processing [{MessageId:l}] Corr: [{CorrelationId:l}]", messageId, corrId);
-                            await next().ConfigureAwait(false);
-                            Logger.DebugEvent("End", "Processing [{MessageId:l}] Corr: [{CorrelationId:l}]", messageId, corrId);
-                        }
-                    }
-                }
+            // Populate the logging context with useful data from the messaeg
+            using (Logger.BeginScope(properties))
+            {
+                Logger.DebugEvent("Start", "Started processing [{MessageId:l}] Corr: [{CorrelationId:l}]", context.MessageId, corrId);
+                await next().ConfigureAwait(false);
+                Logger.DebugEvent("End", "Finished processing [{MessageId:l}] Corr: [{CorrelationId:l}]", context.MessageId, corrId);
             }
         }
     }
@@ -58,7 +61,7 @@ namespace Aggregates.Internal
         public LogContextProviderRegistration() : base(
             stepId: "LogContextProvider",
             behavior: typeof(LogContextProviderBehaviour),
-            description: "Provides useful message information to logger")
+            description: "Provides useful scope information to logger")
         {
             InsertBefore("MutateIncomingMessages");
         }

@@ -62,7 +62,7 @@ namespace Aggregates.Internal
 
                 if (elapsed > _slowAlert.Value.TotalSeconds)
                 {
-                    SlowLogger.WarnEvent("Processed", "{MessageId} {MessageType} took {Milliseconds} payload {Payload}", context.MessageId, messageTypeIdentifier, elapsed, Encoding.UTF8.GetString(context.Message.Body).MaxLines(10));
+                    SlowLogger.WarnEvent("Processed", "[{MessageId:l}] {MessageType} took {Milliseconds} payload {Payload}", context.MessageId, messageTypeIdentifier, elapsed, Encoding.UTF8.GetString(context.Message.Body).MaxLines(10));
                     if (!verbose)
                         lock (SlowLock) SlowCommandTypes.Add(messageTypeIdentifier);
                 }
@@ -82,7 +82,7 @@ namespace Aggregates.Internal
             stepId: "Time Execution",
             behavior: typeof(TimeExecutionBehavior),
             description: "htimes message processing and logs slow ones",
-            factoryMethod: (b) => new TimeExecutionBehavior(b.Build<ILoggerFactory>(), b.Build<Configure>())
+            factoryMethod: (b) => new TimeExecutionBehavior(b.Build<ILoggerFactory>(), b.Build<Settings>())
         )
         {
             InsertBefore("MutateIncomingMessages");

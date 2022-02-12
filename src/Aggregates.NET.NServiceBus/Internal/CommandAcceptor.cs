@@ -23,10 +23,10 @@ namespace Aggregates.Internal
 
         private readonly IMetrics _metrics;
 
-        public CommandAcceptor(IMetrics metrics, ILoggerFactory factory)
+        public CommandAcceptor(ILogger<CommandAcceptor> logger, IMetrics metrics)
         {
+            Logger = logger;
             _metrics = metrics;
-            Logger = factory.CreateLogger("CommandAcceptor");
         }
 
         public override async Task Invoke(IIncomingLogicalMessageContext context, Func<Task> next)
@@ -45,6 +45,7 @@ namespace Aggregates.Internal
                         if (context.MessageHeaders.TryGetValue(Defaults.SagaHeader, out var sagaId))
                             replyOptions.SetHeader(Defaults.SagaHeader, sagaId);
 
+                        replyOptions.RequiredImmediateDispatch();
                         // Tell the sender the command was accepted
                         var accept = context.Builder.Build<Action<Accept>>();
                         await context.Reply<Accept>(accept, replyOptions).ConfigureAwait(false);
@@ -53,8 +54,8 @@ namespace Aggregates.Internal
                 catch (BusinessException e)
                 {
                     _metrics.Mark("Business Exceptions", Unit.Errors);
-                    
-                    Logger.InfoEvent("BusinessException", "{MessageId} {MessageType} rejected {Message}", context.MessageId, context.Message.MessageType.FullName, e.Message);
+
+                    Logger.InfoEvent("BusinessException", "[{MessageId:l}] {MessageType} rejected {Message}", context.MessageId, context.Message.MessageType.FullName, e.Message);
                     if (!context.MessageHeaders.ContainsKey(Defaults.RequestResponse) || context.MessageHeaders[Defaults.RequestResponse] != "1")
                         return; // Dont throw, business exceptions are not message failures
 
@@ -63,11 +64,14 @@ namespace Aggregates.Internal
                     if (context.MessageHeaders.TryGetValue(Defaults.SagaHeader, out var sagaId))
                         replyOptions.SetHeader(Defaults.SagaHeader, sagaId);
 
+                    replyOptions.RequiredImmediateDispatch();
                     // Tell the sender the command was rejected due to a business exception
                     var rejection = context.Builder.Build<Action<BusinessException, Reject>>();
                     await context.Reply<Reject>((msg) => rejection(e, msg), replyOptions).ConfigureAwait(false);
 
-                    // ExceptionRejector will filter out BusinessException, throw is just to cancel the UnitOfWork
+                    // so failure reply behavior doesnt send a reply as well
+                    context.MessageHandled = true;
+
                     throw;
                 }
                 return;
@@ -83,7 +87,7 @@ namespace Aggregates.Internal
             stepId: "CommandAcceptor",
             behavior: typeof(CommandAcceptor),
             description: "Filters [BusinessException] from processing failures",
-            factoryMethod: (b) => new CommandAcceptor(b.Build<IMetrics>(), b.Build<ILoggerFactory>())
+            factoryMethod: (b) => new CommandAcceptor(b.Build<ILogger<CommandAcceptor>>(), b.Build<IMetrics>())
         )
         {
             // If a command fails business exception uow still needs to error out

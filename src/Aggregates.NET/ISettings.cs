@@ -18,12 +18,12 @@ namespace Aggregates
         // Data settings
         StreamIdGenerator Generator { get; }
         int ReadSize { get; }
-        Compression Compression { get;}
+        Compression Compression { get; }
 
         // Messaging settings
-        string Endpoint { get;  }
-        string UniqueAddress { get;  }
-
+        string Endpoint { get; }
+        string UniqueAddress { get; }
+        int Retries { get; }
 
         bool AllEvents { get; }
         bool Passive { get; }

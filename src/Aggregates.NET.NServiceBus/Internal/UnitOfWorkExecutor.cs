@@ -24,9 +24,9 @@ namespace Aggregates.Internal
         private readonly IServiceProvider _provider;
         private readonly IMetrics _metrics;
 
-        public UnitOfWorkExecutor(ILoggerFactory logFactory, ISettings settings, IServiceProvider provider, IMetrics metrics)
+        public UnitOfWorkExecutor(ILogger<UnitOfWorkExecutor> logger, ISettings settings, IServiceProvider provider, IMetrics metrics)
         {
-            Logger = logFactory.CreateLogger("UOW Executor");
+            Logger = logger;
             _settings = settings;
             _provider = provider;
             _metrics = metrics;
@@ -138,10 +138,10 @@ namespace Aggregates.Internal
             stepId: "UnitOfWorkExecution",
             behavior: typeof(UnitOfWorkExecutor),
             description: "Begins and Ends unit of work for your application",
-            factoryMethod: (b) => new UnitOfWorkExecutor(b.Build<ILoggerFactory>(), b.Build<ISettings>(), b.Build<IServiceProvider>(), b.Build<IMetrics>())
+            factoryMethod: (b) => new UnitOfWorkExecutor(b.Build<ILogger<UnitOfWorkExecutor>>(), b.Build<ISettings>(), b.Build<IServiceProvider>(), b.Build<IMetrics>())
         )
         {
-            InsertAfterIfExists("ExceptionRejector");
+            InsertAfterIfExists("FailureReply");
         }
     }
 }

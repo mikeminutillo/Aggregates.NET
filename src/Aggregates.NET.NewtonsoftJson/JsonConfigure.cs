@@ -13,12 +13,12 @@ namespace Aggregates
     [ExcludeFromCodeCoverage]
     public static class JsonConfigure
     {
-        public static Configure NewtonsoftJson(this Configure config, JsonConverter[] extraConverters = null)
+        public static Settings NewtonsoftJson(this Settings config, JsonConverter[] extraConverters = null)
         {
             extraConverters = extraConverters ?? new JsonConverter[] { };
 
             config.MessageContentType = "json";
-            Configure.RegistrationTasks.Add((container, settings) =>
+            Settings.RegistrationTasks.Add((container, settings) =>
             {                                
                 container.AddSingleton<IMessageSerializer>((factory) => new JsonMessageSerializer(factory.GetRequiredService<IEventMapper>(), factory.GetRequiredService<IEventFactory>(), extraConverters));
 

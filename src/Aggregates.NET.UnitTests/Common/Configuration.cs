@@ -1,5 +1,4 @@
-﻿using Aggregates.Contracts;
-using FakeItEasy;
+﻿using FakeItEasy;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -42,7 +41,7 @@ namespace Aggregates.Common
             var provider = Fake<IServiceProvider>();
             await Aggregates.Configuration.Build(collection, config =>
             {
-                Configure.RegistrationTasks.Add((container, _) =>
+                Internal.Settings.RegistrationTasks.Add((container, _) =>
                 {
                     called = true;
                     return Task.CompletedTask;
@@ -59,7 +58,7 @@ namespace Aggregates.Common
             var provider = Fake<IServiceProvider>();
             await Aggregates.Configuration.Build(collection, config =>
             {
-                Configure.SetupTasks.Add((container, _) =>
+                Internal.Settings.SetupTasks.Add((container, _) =>
                 {
                     called = true;
                     return Task.CompletedTask;
@@ -75,7 +74,7 @@ namespace Aggregates.Common
             var provider = Fake<IServiceProvider>();
             var e = await Record.ExceptionAsync(() => Aggregates.Configuration.Build(collection, config =>
             {
-                Configure.RegistrationTasks.Add((container, _) =>
+                Internal.Settings.RegistrationTasks.Add((container, _) =>
                 {
                     throw new Exception();
                 });
@@ -90,7 +89,7 @@ namespace Aggregates.Common
             var provider = Fake<IServiceProvider>();
             var config = await Aggregates.Configuration.Build(collection, config =>
             {
-                Configure.SetupTasks.Add((container, _) =>
+                Internal.Settings.SetupTasks.Add((container, _) =>
                 {
                     throw new Exception();
                 });

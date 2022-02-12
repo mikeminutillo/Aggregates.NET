@@ -17,9 +17,9 @@ namespace Aggregates.Internal
         private readonly IMetrics _metrics;
         private readonly IMessageDispatcher _dispatcher;
 
-        public SagaBehaviour(ILoggerFactory logFactory, IMetrics metrics, IMessageDispatcher dispatcher)
+        public SagaBehaviour(ILogger<SagaBehaviour> logger, IMetrics metrics, IMessageDispatcher dispatcher)
         {
-            Logger = logFactory.CreateLogger("SagaBehaviour");
+            Logger = logger;
             _metrics = metrics;
             _dispatcher = dispatcher;
         }
@@ -83,10 +83,10 @@ namespace Aggregates.Internal
             stepId: "SagaBehaviour",
             behavior: typeof(SagaBehaviour),
             description: "Handles internal sagas for consecutive command support",
-            factoryMethod: (b) => new SagaBehaviour(b.Build<ILoggerFactory>(), b.Build<IMetrics>(), b.Build<IMessageDispatcher>())
+            factoryMethod: (b) => new SagaBehaviour(b.Build<ILogger<SagaBehaviour>>(), b.Build<IMetrics>(), b.Build<IMessageDispatcher>())
         )
         {
-            InsertBefore("ExceptionRejector");
+            InsertBefore("FailureReply");
         }
     }
 
