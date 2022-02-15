@@ -18,6 +18,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Aggregates.Extensions;
 using Aggregates.Messages;
+using NServiceBus.Extensions.Logging;
 
 namespace Aggregates
 {
@@ -128,6 +129,9 @@ namespace Aggregates
 
             Settings.SetupTasks.Add((container, settings) =>
             {
+                var logFactory = container.GetService<ILoggerFactory>();
+                if(logFactory != null)
+                    global::NServiceBus.Logging.LogManager.UseFactory(new ExtensionsLoggerFactory(logFactory));
 
                 return Aggregates.Bus.Start(container, startableEndpoint);
             });

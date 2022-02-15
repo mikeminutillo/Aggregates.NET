@@ -9,9 +9,7 @@ namespace Aggregates
     public static class StreamTypes
     {
         public const string Domain = "DOMAIN";
-        public const string Delayed = "DELAY";
         public const string Snapshot = "SNAPSHOT";
-        public const string OOB = "OOB";
         public const string Children = "CHILDREN";
     }
 

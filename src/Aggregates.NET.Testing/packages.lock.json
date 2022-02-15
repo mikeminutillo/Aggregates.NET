@@ -102,6 +102,15 @@
           "NServiceBus": "[7.2.3, 8.0.0)"
         }
       },
+      "NServiceBus.Extensions.Logging": {
+        "type": "Transitive",
+        "resolved": "1.0.0",
+        "contentHash": "h5B7C+z19RzvtJQHqNdLASrN5oVmdkrgtqkTHdI3zIqFohBPSXZMiGuHvlg0WuPivZsTC1/mhBmoAZAU/UFTsw==",
+        "dependencies": {
+          "Microsoft.Extensions.Logging.Abstractions": "3.1.2",
+          "NServiceBus": "[7.2.3, 8.0.0)"
+        }
+      },
       "System.Buffers": {
         "type": "Transitive",
         "resolved": "4.5.1",
@@ -211,7 +220,8 @@
           "Microsoft.Extensions.DependencyInjection.Abstractions": "6.0.0",
           "NServiceBus": "7.4.6",
           "NServiceBus.Callbacks": "3.0.0",
-          "NServiceBus.Extensions.DependencyInjection": "1.0.1"
+          "NServiceBus.Extensions.DependencyInjection": "1.0.1",
+          "NServiceBus.Extensions.Logging": "1.0.0"
         }
       }
     }

@@ -91,20 +91,9 @@ namespace Aggregates.Internal
                     container.AddTransient<IRepositoryFactory, RepositoryFactory>();
                     container.AddTransient<IStoreSnapshots, StoreSnapshots>();
                     container.AddTransient<IStoreEntities, StoreEntities>();
+                    container.AddTransient<IEventSubscriber, EventSubscriber>();
 
-                    container.AddTransient<IEventSubscriber[]>(builder => new[] {
-                        new EventSubscriber(
-                            builder.GetRequiredService<ILogger<EventSubscriber>>(),
-                            builder,
-                            builder.GetRequiredService<IMetrics>(),
-                            builder.GetRequiredService<IMessaging>(),
-                            builder.GetRequiredService<IEventStoreConsumer>(),
-                            builder.GetRequiredService<IVersionRegistrar>(),
-                            settings.AllEvents),
-                        (IEventSubscriber)builder.GetRequiredService<IStoreSnapshots>()
-                    });
-
-                    container.AddTransient<ISnapshotReader, SnapshotReader>();
+                    container.AddTransient<IEventSubscriber, EventSubscriber>();
 
                     container.AddTransient<ITrackChildren, TrackChildren>();
 

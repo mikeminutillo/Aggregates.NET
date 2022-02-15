@@ -49,6 +49,16 @@
           "NServiceBus": "[7.2.3, 8.0.0)"
         }
       },
+      "NServiceBus.Extensions.Logging": {
+        "type": "Direct",
+        "requested": "[1.0.0, )",
+        "resolved": "1.0.0",
+        "contentHash": "h5B7C+z19RzvtJQHqNdLASrN5oVmdkrgtqkTHdI3zIqFohBPSXZMiGuHvlg0WuPivZsTC1/mhBmoAZAU/UFTsw==",
+        "dependencies": {
+          "Microsoft.Extensions.Logging.Abstractions": "3.1.2",
+          "NServiceBus": "[7.2.3, 8.0.0)"
+        }
+      },
       "Microsoft.Build.Tasks.Git": {
         "type": "Transitive",
         "resolved": "1.1.1",

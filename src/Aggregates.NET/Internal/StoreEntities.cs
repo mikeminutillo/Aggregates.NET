@@ -103,7 +103,6 @@ namespace Aggregates.Internal
             var state = entity.State;
 
             var domainEvents = entity.Uncommitted.Where(x => x.Descriptor.StreamType == StreamTypes.Domain).ToArray();
-            var oobEvents = entity.Uncommitted.Where(x => x.Descriptor.StreamType == StreamTypes.OOB).ToArray();
 
             try
             {

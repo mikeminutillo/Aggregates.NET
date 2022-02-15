@@ -14,13 +14,13 @@ namespace Aggregates.Internal
 {
     public class MutateIncoming : Behavior<IIncomingLogicalMessageContext>
     {
-        private readonly IServiceProvider _provider;
         private readonly ILogger Logger;
-        
-        public MutateIncoming(ILoggerFactory logFactory, IServiceProvider provider)
+        private readonly IMutate[] _mutators;
+
+        public MutateIncoming(ILogger<MutateIncoming> logger, IMutate[] mutators)
         {
-            Logger = logFactory.CreateLogger("MutateIncoming");
-            _provider = provider;
+            Logger = logger;
+            _mutators = mutators;
         }
         
         public override Task Invoke(IIncomingLogicalMessageContext context, Func<Task> next)
@@ -30,11 +30,10 @@ namespace Aggregates.Internal
 
             IMutating mutated = new Mutating(context.Message.Instance, context.Headers ?? new Dictionary<string, string>());
 
-            var mutators = _provider.GetServices<IMutate>();
-            if (!mutators.Any()) return next();
+            if (!_mutators.Any()) return next();
 
 
-            foreach (var mutator in mutators)
+            foreach (var mutator in _mutators)
             {
                 try
                 {

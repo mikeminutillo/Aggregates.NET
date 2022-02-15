@@ -16,12 +16,12 @@ namespace Aggregates.Internal
     {
         private readonly ILogger Logger;
 
-        private readonly IServiceProvider _provider;
+        private readonly IMutate[] _mutators;
 
-        public MutateOutgoing(ILoggerFactory logFactory, IServiceProvider provider)
+        public MutateOutgoing(ILogger<MutateOutgoing> logger, IMutate[] mutators)
         {
-            Logger = logFactory.CreateLogger("MutateOutgoing");
-            _provider = provider;
+            Logger = logger;
+            _mutators = mutators;
         }
         public override Task Invoke(IOutgoingLogicalMessageContext context, Func<Task> next)
         {
@@ -36,12 +36,10 @@ namespace Aggregates.Internal
 
             IMutating mutated = new Mutating(context.Message.Instance, context.Headers ?? new Dictionary<string, string>());
 
-            var mutators = _provider.GetServices<IMutate>();
-
-            if (!mutators.Any()) return next();
+            if (!_mutators.Any()) return next();
 
 
-            foreach (var mutator in mutators)
+            foreach (var mutator in _mutators)
             {
                 try
                 {
