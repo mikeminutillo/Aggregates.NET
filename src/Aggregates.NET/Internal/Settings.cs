@@ -209,6 +209,7 @@ namespace Aggregates.Internal
         {
             RegistrationTasks.Add((container, settings) =>
             {
+                container.AddTransient<Aggregates.UnitOfWork.IUnitOfWork>(factory => factory.GetRequiredService<Aggregates.UnitOfWork.IApplicationUnitOfWork>());
                 container.AddTransient<Aggregates.UnitOfWork.IApplicationUnitOfWork, TImplementation>();
                 return Task.CompletedTask;
             });
@@ -218,6 +219,7 @@ namespace Aggregates.Internal
         {
             RegistrationTasks.Add((container, settings) =>
             {
+                container.AddTransient<Aggregates.UnitOfWork.IUnitOfWork>(factory => factory.GetRequiredService<Aggregates.UnitOfWork.IDomainUnitOfWork>());
                 container.AddTransient<Aggregates.UnitOfWork.IDomainUnitOfWork, Internal.UnitOfWork>();
                 return Task.CompletedTask;
             });

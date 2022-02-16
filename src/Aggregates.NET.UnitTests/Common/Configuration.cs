@@ -104,7 +104,7 @@ namespace Aggregates.Common
         }
 
         [Fact]
-        public async Task ThrowsWhenNoUnitOfWork()
+        public async Task DoesNotThrowsWhenNoUnitOfWork()
         {
             var collection = Fake<IServiceCollection>();
             var provider = Fake<IServiceProvider>();
@@ -114,10 +114,9 @@ namespace Aggregates.Common
             {
             });
 
-            var e = await Record.ExceptionAsync(() => config.Start(provider)).ConfigureAwait(false);
+            await config.Start(provider).ConfigureAwait(false);
 
-            e.Should().BeOfType<InvalidOperationException>();
-            config.Setup.Should().BeFalse();
+            config.Setup.Should().BeTrue();
         }
         [Fact]
         public async Task ThrowsWhenDoesntImplementBaseUnitOfWork()
