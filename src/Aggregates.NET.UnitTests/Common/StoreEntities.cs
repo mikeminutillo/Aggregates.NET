@@ -19,8 +19,8 @@ namespace Aggregates.Common
 
         public StoreEntities()
         {
-            var fakeuow = new Fake<Aggregates.UnitOfWork.IDomain>();
-            A.CallTo(() => Provider.GetService(typeof(Aggregates.UnitOfWork.IDomain))).Returns(fakeuow.FakedObject);
+            var fakeuow = new Fake<Aggregates.UnitOfWork.IDomainUnitOfWork>();
+            A.CallTo(() => Provider.GetService(typeof(Aggregates.UnitOfWork.IDomainUnitOfWork))).Returns(fakeuow.FakedObject);
 
             Snapstore = Fake<IStoreSnapshots>();
             A.CallTo(() => Snapstore.GetSnapshot<FakeEntity>(A<string>.Ignored, A<Id>.Ignored, A<Id[]>.Ignored)).Returns(Task.FromResult((ISnapshot)null));

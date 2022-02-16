@@ -87,6 +87,8 @@ namespace Aggregates.Common
         {
             var collection = Fake<IServiceCollection>();
             var provider = Fake<IServiceProvider>();
+            A.CallTo(() => provider.GetService(typeof(Aggregates.UnitOfWork.IUnitOfWork))).Returns(Fake<Internal.UnitOfWork>());
+
             var config = await Aggregates.Configuration.Build(collection, config =>
             {
                 Internal.Settings.SetupTasks.Add((container, _) =>
@@ -100,6 +102,42 @@ namespace Aggregates.Common
             e.Should().BeOfType<Exception>();
             config.Setup.Should().BeFalse();
         }
+
+        [Fact]
+        public async Task ThrowsWhenNoUnitOfWork()
+        {
+            var collection = Fake<IServiceCollection>();
+            var provider = Fake<IServiceProvider>();
+            A.CallTo(() => provider.GetService(typeof(Aggregates.UnitOfWork.IUnitOfWork))).Returns(null);
+
+            var config = await Aggregates.Configuration.Build(collection, config =>
+            {
+            });
+
+            var e = await Record.ExceptionAsync(() => config.Start(provider)).ConfigureAwait(false);
+
+            e.Should().BeOfType<InvalidOperationException>();
+            config.Setup.Should().BeFalse();
+        }
+        [Fact]
+        public async Task ThrowsWhenDoesntImplementBaseUnitOfWork()
+        {
+            var collection = Fake<IServiceCollection>();
+            var provider = Fake<IServiceProvider>();
+            A.CallTo(() => provider.GetService(typeof(Aggregates.UnitOfWork.IUnitOfWork))).Returns(Fake<Aggregates.UnitOfWork.IUnitOfWork>());
+
+            var config = await Aggregates.Configuration.Build(collection, config =>
+            {
+            });
+
+            var e = await Record.ExceptionAsync(() => config.Start(provider)).ConfigureAwait(false);
+
+            e.Should().BeOfType<InvalidOperationException>();
+            config.Setup.Should().BeFalse();
+        }
+
+
+
         [Fact]
         public async Task ShouldSetOptions()
         {

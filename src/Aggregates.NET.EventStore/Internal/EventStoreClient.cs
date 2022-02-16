@@ -384,7 +384,7 @@ namespace Aggregates.Internal
             catch (SerializationException)
             {
                 // Try the old format
-                descriptor = _serializer.Deserialize<LegecyEventDescriptor>(metadata);
+                descriptor = _serializer.Deserialize<LegacyEventDescriptor>(metadata);
             }
 
             if (descriptor.Compressed)
@@ -518,7 +518,7 @@ namespace Aggregates.Internal
                 catch (SerializationException)
                 {
                     // Try the old format
-                    descriptor = _serializer.Deserialize<LegecyEventDescriptor>(metadata);
+                    descriptor = _serializer.Deserialize<LegacyEventDescriptor>(metadata);
                 }
 
                 if (descriptor == null || descriptor.EventId == Guid.Empty)
@@ -626,7 +626,7 @@ namespace Aggregates.Internal
                 catch (SerializationException)
                 {
                     // Try the old format
-                    descriptor = _serializer.Deserialize<LegecyEventDescriptor>(metadata);
+                    descriptor = _serializer.Deserialize<LegacyEventDescriptor>(metadata);
                 }
 
                 if (descriptor == null || descriptor.EventId == Guid.Empty)

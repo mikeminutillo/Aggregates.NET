@@ -25,6 +25,14 @@ namespace Aggregates
 
             try
             {
+                // verify certain agg.net stuff now we have a container
+                var uow = serviceProvider.GetService<UnitOfWork.IUnitOfWork>();
+                if (uow == null)
+                    throw new InvalidOperationException("No unit of work defined, use setting 'Domain' or 'Application' depending on endpoint type");
+                // i didnt want to make this interface explicit to avoid the user being able to do `ctx.Uow().End()` in his handlers like a silly
+                if (!(uow is UnitOfWork.IBaseUnitOfWork))
+                    throw new InvalidOperationException($"Unit of work {uow.GetType().Name} needs to also implement {typeof(UnitOfWork.IBaseUnitOfWork)}");
+
                 await Internal.Settings.SetupTasks.WhenAllAsync(x => x(serviceProvider, Settings)).ConfigureAwait(false);
             }
             catch

@@ -153,7 +153,7 @@ namespace Aggregates
             throw new NotImplementedException();
         }
     }
-    public class FakeAppUnitOfWork : UnitOfWork.IApplication
+    public class FakeAppUnitOfWork : UnitOfWork.IUnitOfWork
     {
         public dynamic Bag { get; set; }
     }

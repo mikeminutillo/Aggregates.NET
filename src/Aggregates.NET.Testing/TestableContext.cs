@@ -34,8 +34,8 @@ namespace Aggregates
             App = new TestableApplication(_ids);
             Processor = new TestableProcessor();
 
-            _ctx.Extensions.Set<UnitOfWork.IDomain>(UoW);
-            _ctx.Extensions.Set<UnitOfWork.IApplication>(App);
+            _ctx.Extensions.Set<UnitOfWork.IDomainUnitOfWork>(UoW);
+            _ctx.Extensions.Set<UnitOfWork.IUnitOfWork>(App);
             _ctx.Extensions.Set<IProcessor>(Processor);
             
         }

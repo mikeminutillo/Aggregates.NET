@@ -34,7 +34,7 @@ namespace Aggregates
 
                 var entity = factory.Create(Fake<ILogger>(), Defaults.Bucket, Fake<Id>(), null, Many<FakeDomainEvent.FakeEvent>());
 
-                (entity as INeedDomainUow).Uow = Fake<UnitOfWork.IDomain>();
+                (entity as INeedDomainUow).Uow = Fake<UnitOfWork.IDomainUnitOfWork>();
                 (entity as INeedEventFactory).EventFactory = Fake<IEventFactory>();
                 (entity as INeedStore).Store = Fake<IStoreEvents>();
 
@@ -46,7 +46,7 @@ namespace Aggregates
 
                 var entity = factory.Create(Fake<ILogger>(), Defaults.Bucket, Fake<Id>(), null, Many<FakeDomainEvent.FakeEvent>());
 
-                (entity as INeedDomainUow).Uow = Fake<UnitOfWork.IDomain>();
+                (entity as INeedDomainUow).Uow = Fake<UnitOfWork.IDomainUnitOfWork>();
                 (entity as INeedEventFactory).EventFactory = Fake<IEventFactory>();
                 (entity as INeedStore).Store = Fake<IStoreEvents>();
 

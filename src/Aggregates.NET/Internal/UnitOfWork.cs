@@ -12,8 +12,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Aggregates.Internal
 {
-    public class UnitOfWork : Aggregates.UnitOfWork.IDomain, Aggregates.UnitOfWork.IUnitOfWork, IDisposable
+    public class UnitOfWork : Aggregates.UnitOfWork.IDomainUnitOfWork, Aggregates.UnitOfWork.IBaseUnitOfWork, IDisposable
     {
+
         private static readonly ConcurrentDictionary<Guid, Guid> EventIds = new ConcurrentDictionary<Guid, Guid>();
 
         public static Guid NextEventId(Guid commitId)
@@ -89,11 +90,11 @@ namespace Aggregates.Internal
         }
 
 
-        Task Aggregates.UnitOfWork.IUnitOfWork.Begin()
+        Task Aggregates.UnitOfWork.IBaseUnitOfWork.Begin()
         {
             return Task.FromResult(true);
         }
-        Task Aggregates.UnitOfWork.IUnitOfWork.End(Exception ex)
+        Task Aggregates.UnitOfWork.IBaseUnitOfWork.End(Exception ex)
         {
             // Todo: If current message is an event, detect if they've modified any entities and warn them.
             if (ex != null || CurrentMessage is IEvent)

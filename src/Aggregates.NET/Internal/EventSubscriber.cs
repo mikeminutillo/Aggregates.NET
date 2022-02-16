@@ -28,18 +28,16 @@ namespace Aggregates.Internal
         private readonly IMessaging _messaging;
 
         private readonly IEventStoreConsumer _consumer;
-        private readonly IVersionRegistrar _registrar;
         private readonly IMessageDispatcher _dispatcher;
 
         private bool _disposed;
 
 
-        public EventSubscriber(ILogger<EventSubscriber> logger, IMessaging messaging, IEventStoreConsumer consumer, IVersionRegistrar registrar, IMessageDispatcher dispatcher)
+        public EventSubscriber(ILogger<EventSubscriber> logger, IMessaging messaging, IEventStoreConsumer consumer, IMessageDispatcher dispatcher)
         {
             Logger = logger;
             _messaging = messaging;
             _consumer = consumer;
-            _registrar = registrar;
             _dispatcher = dispatcher;
 
         }

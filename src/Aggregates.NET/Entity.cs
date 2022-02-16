@@ -41,13 +41,13 @@ namespace Aggregates
 
         private readonly IList<IFullEvent> _uncommitted = new List<IFullEvent>();
 
-        private UnitOfWork.IDomain Uow => (this as INeedDomainUow).Uow;
+        private UnitOfWork.IDomainUnitOfWork Uow => (this as INeedDomainUow).Uow;
         private IEventFactory Factory => (this as INeedEventFactory).EventFactory;
         private IStoreEvents Store => (this as INeedStore).Store;
         private IVersionRegistrar VersionRegistrar => (this as INeedVersionRegistrar).Registrar;
         private ITrackChildren ChildrenTracker => (this as INeedChildTracking).Tracker;
 
-        UnitOfWork.IDomain INeedDomainUow.Uow { get; set; }
+        UnitOfWork.IDomainUnitOfWork INeedDomainUow.Uow { get; set; }
         IEventFactory INeedEventFactory.EventFactory { get; set; }
         IStoreEvents INeedStore.Store { get; set; }
         IVersionRegistrar INeedVersionRegistrar.Registrar { get; set; }

@@ -9,7 +9,7 @@ namespace Aggregates.Internal
 {
     public class FullEventFactory
     {
-        public static IFullEvent Event(IVersionRegistrar versionRegistry, Aggregates.UnitOfWork.IDomain uow, IEntity entity, IEvent @event)
+        public static IFullEvent Event(IVersionRegistrar versionRegistry, Aggregates.UnitOfWork.IDomainUnitOfWork uow, IEntity entity, IEvent @event)
         {
             var eventId = Internal.UnitOfWork.NextEventId(uow.CommitId);
 

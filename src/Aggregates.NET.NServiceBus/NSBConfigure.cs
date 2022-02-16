@@ -58,7 +58,7 @@ namespace Aggregates
 
                 container.AddSingleton<IEventMapper, EventMapper>();
 
-                container.AddScoped<UnitOfWork.IDomain, NSBUnitOfWork>();
+                container.AddScoped<UnitOfWork.IDomainUnitOfWork, NSBUnitOfWork>();
 
                 container.AddSingleton<IEventFactory, EventFactory>();
                 container.AddSingleton<IMessageDispatcher, Dispatcher>();
@@ -101,6 +101,7 @@ namespace Aggregates
 
                 recoverability.Delayed(recovery =>
                 {
+                    recovery.TimeIncrease(TimeSpan.FromSeconds(2));
                     recovery.NumberOfRetries(config.Retries);
                     recovery.OnMessageBeingRetried(message =>
                     {

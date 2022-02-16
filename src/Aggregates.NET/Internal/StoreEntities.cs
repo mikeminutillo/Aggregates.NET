@@ -49,7 +49,7 @@ namespace Aggregates.Internal
         }
         public Task<TEntity> New<TEntity, TState>(string bucket, Id id, IEntity parent) where TEntity : IEntity<TState> where TState : class, IState, new()
         {
-            var uow = _provider.GetRequiredService<Aggregates.UnitOfWork.IDomain>();
+            var uow = _provider.GetRequiredService<Aggregates.UnitOfWork.IDomainUnitOfWork>();
 
             var factory = EntityFactory.For<TEntity>();
 
@@ -67,7 +67,7 @@ namespace Aggregates.Internal
         }
         public async Task<TEntity> Get<TEntity, TState>(string bucket, Id id, IEntity parent) where TEntity : IEntity<TState> where TState : class, IState, new()
         {
-            var uow = _provider.GetRequiredService<Aggregates.UnitOfWork.IDomain>();
+            var uow = _provider.GetRequiredService<Aggregates.UnitOfWork.IDomainUnitOfWork>();
 
             var factory = EntityFactory.For<TEntity>();
 

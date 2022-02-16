@@ -11,7 +11,7 @@ namespace Aggregates.UnitOfWork
     /// do not need to implement yourself - but recomended if you want 
     /// easier testing!
     /// </summary>
-    public interface IGeneric : IApplication
+    public interface IApplicationUnitOfWork : IUnitOfWork
     {
         Task Add<T>(Id id, T document) where T : class;
         Task Update<T>(Id id, T document) where T : class;

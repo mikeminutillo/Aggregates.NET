@@ -205,5 +205,23 @@ namespace Aggregates.Internal
             });
             return this;
         }
+        public Settings Application<TImplementation>() where TImplementation : class, Aggregates.UnitOfWork.IApplicationUnitOfWork
+        {
+            RegistrationTasks.Add((container, settings) =>
+            {
+                container.AddTransient<Aggregates.UnitOfWork.IApplicationUnitOfWork, TImplementation>();
+                return Task.CompletedTask;
+            });
+            return this;
+        }
+        public Settings Domain()
+        {
+            RegistrationTasks.Add((container, settings) =>
+            {
+                container.AddTransient<Aggregates.UnitOfWork.IDomainUnitOfWork, Internal.UnitOfWork>();
+                return Task.CompletedTask;
+            });
+            return this;
+        }
     }
 }

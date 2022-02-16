@@ -42,7 +42,7 @@ namespace Aggregates.Internal
 
             return _consumer.SetupChildrenProjection(endpoint, version);
         }
-        public async Task<TEntity[]> GetChildren<TEntity, TParent>(IDomain uow, TParent parent) where TEntity : IChildEntity<TParent> where TParent : IHaveEntities<TParent>
+        public async Task<TEntity[]> GetChildren<TEntity, TParent>(IDomainUnitOfWork uow, TParent parent) where TEntity : IChildEntity<TParent> where TParent : IHaveEntities<TParent>
         {
             if (!_enabled)
                 throw new InvalidOperationException("Could not get children, TrackChildren is not enabled in settings");

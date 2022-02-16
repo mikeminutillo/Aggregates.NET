@@ -18,7 +18,6 @@ namespace Aggregates.Internal
     public class UnitOfWorkExecutor : Behavior<IIncomingLogicalMessageContext>
     {
         private readonly ILogger Logger;
-        private static readonly ConcurrentDictionary<string, dynamic> Bags = new ConcurrentDictionary<string, dynamic>();
 
         private readonly ISettings _settings;
         private readonly IServiceProvider _provider;
@@ -52,44 +51,32 @@ namespace Aggregates.Internal
                     return;
                 }
 
-                var domainUOW = _provider.GetRequiredService<Aggregates.UnitOfWork.IDomain>();
-                Aggregates.UnitOfWork.IApplication appUOW = null;
+                Aggregates.UnitOfWork.IUnitOfWork uow = null;
+                if (context.Message.Instance is Messages.ICommand)
+                    uow = _provider.GetService<Aggregates.UnitOfWork.IDomainUnitOfWork>();
+                else
+                    uow = _provider.GetService<Aggregates.UnitOfWork.IApplicationUnitOfWork>();
 
-                // IUnitOfWork might not be defined by user
-                appUOW = _provider.GetService<Aggregates.UnitOfWork.IApplication>();
-                if (appUOW != null)
-                {
-                    appUOW.Bag = new System.Dynamic.ExpandoObject();
-                    // if this is a retry pull the bag from the registry
-                    if (Bags.TryRemove(context.MessageId, out var bag))
-                        appUOW.Bag = bag;
-                }
+                // uow can be null if the message is an event and application unit of work was not defined.
+                // this means the event can still read things but no changes will be committed anywhere
 
                 // Set into the context because DI can be slow
-                context.Extensions.Set(domainUOW);
-                context.Extensions.Set(appUOW);
+                context.Extensions.Set(uow);
                 context.Extensions.Set(_settings);
                 context.Extensions.Set(_settings.Configuration);
 
-                var commitableUow = domainUOW as Aggregates.UnitOfWork.IUnitOfWork;
-                var commitableAppUow = appUOW as Aggregates.UnitOfWork.IUnitOfWork;
+                var commitableUow = uow as Aggregates.UnitOfWork.IBaseUnitOfWork;
                 try
                 {
                     _metrics.Increment("Messages Concurrent", Unit.Message);
                     using (_metrics.Begin("Message Duration"))
                     {
-                        if (context.Message.Instance is Messages.ICommand)
-                            await commitableUow.Begin().ConfigureAwait(false);
-
-                        if (commitableAppUow != null)
-                            await commitableAppUow.Begin().ConfigureAwait(false);
+                        await (commitableUow?.Begin() ?? Task.CompletedTask).ConfigureAwait(false);
 
                         await next().ConfigureAwait(false);
 
-                        if (context.Message.Instance is Messages.ICommand)
-                            await commitableUow.End().ConfigureAwait(false);
-                        if (commitableAppUow != null)
-                            await commitableAppUow.End().ConfigureAwait(false);
+                        await (commitableUow?.End() ?? Task.CompletedTask).ConfigureAwait(false);
+
                     }
 
                 }
@@ -101,14 +88,7 @@ namespace Aggregates.Internal
 
                     try
                     {
-                        // Todo: if one throws an exception (again) the others wont work.  Fix with a loop of some kind
-                        if (context.Message.Instance is Messages.ICommand)
-                            await commitableUow.End(e).ConfigureAwait(false);
-                        if (appUOW != null)
-                        {
-                            await commitableAppUow.End(e).ConfigureAwait(false);
-                            Bags.TryAdd(context.MessageId, appUOW.Bag);
-                        }
+                        await (commitableUow?.End(e) ?? Task.CompletedTask).ConfigureAwait(false);
                     }
                     catch (Exception endException)
                     {
@@ -137,7 +117,7 @@ namespace Aggregates.Internal
         public UowRegistration() : base(
             stepId: "UnitOfWorkExecution",
             behavior: typeof(UnitOfWorkExecutor),
-            description: "Begins and Ends unit of work for your application",
+            description: "Begins and Ends unit of work for your endpoint",
             factoryMethod: (b) => new UnitOfWorkExecutor(b.Build<ILogger<UnitOfWorkExecutor>>(), b.Build<ISettings>(), b.Build<IServiceProvider>(), b.Build<IMetrics>())
         )
         {

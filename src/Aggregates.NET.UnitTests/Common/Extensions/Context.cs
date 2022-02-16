@@ -12,15 +12,6 @@ namespace Aggregates.Common.Extensions
     public class Context : Test
     {
         [Fact]
-        public void ShouldGetAppUnitOfWork()
-        {
-            var context = Fake<IServiceContext>();
-            A.CallTo(() => context.App).Returns(new FakeAppUnitOfWork());
-
-            var uow = context.App<FakeAppUnitOfWork>();
-            uow.Should().NotBeNull();
-        }
-        [Fact]
         public void ShouldProcessService()
         {
             var context = Fake<IServiceContext>();

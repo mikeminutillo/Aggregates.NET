@@ -37,7 +37,7 @@ namespace Aggregates.NServiceBus
         {
             var mutator = new FakeMutator();
             var provider = Fake<IServiceProvider>();
-            A.CallTo(() => provider.GetService(typeof(IMutate))).Returns(new FakeMutator());
+            Inject<IMutate[]>(new[] { mutator });
 
             var next = A.Fake<Func<Task>>();
             var context = new TestableOutgoingLogicalMessageContext();
