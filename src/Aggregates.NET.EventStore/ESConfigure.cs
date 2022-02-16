@@ -41,10 +41,10 @@ namespace Aggregates
 
             // Prevents creation of event store connections until Provider is available
             // since logger needs ILogger defined
-            Func<IServiceProvider, ISettings, IEventStoreConnection[]> connections = (provider, settings) => esSettings._definedConnections.Select(x =>
+            Func<IServiceProvider, IEventStoreConnection[]> connections = (provider) => esSettings._definedConnections.Select(x =>
             {
                 x.Value.settings
-                    .LimitAttemptsForOperationTo(settings.Retries)
+                    .LimitAttemptsForOperationTo(config.Retries)
                     .UseCustomLogger(provider.GetRequiredService<EventStore.ClientAPI.ILogger>())
                     .EnableVerboseLogging();
 
@@ -54,28 +54,11 @@ namespace Aggregates
             Settings.RegistrationTasks.Add((container, settings) =>
             {
                 container.AddSingleton<EventStore.ClientAPI.ILogger, EventStoreLogger>();
-                //container.AddSingleton<IEventStoreClient>(factory => new EventStoreClient(factory.GetRequiredService<ILogger<EventStoreClient>>(), connections));
-                //container.AddSingleton<IEventStoreConsumer>((factory) =>
-                //    new EventStoreConsumer(
-                //        factory.GetRequiredService<ILoggerFactory>(),
-                //        factory.GetRequiredService<ISettings>(),
-                //        factory.GetRequiredService<IMetrics>(),
-                //        factory.GetRequiredService<IMessageSerializer>(),
-                //        factory.GetRequiredService<IVersionRegistrar>(),
-                //        connections,
-                //        factory.GetRequiredService<IEventMapper>()
-                //        ));
-                //container.AddSingleton<IStoreEvents>((factory) =>
-                //    new StoreEvents(
-                //        factory.GetRequiredService<ILoggerFactory>(),
-                //        factory.GetRequiredService<ISettings>(),
-                //        factory.GetRequiredService<IServiceProvider>(),
-                //        factory.GetRequiredService<IMetrics>(),
-                //        factory.GetRequiredService<IMessageSerializer>(),
-                //        factory.GetRequiredService<IEventMapper>(),
-                //        factory.GetRequiredService<IVersionRegistrar>(),
-                //        connections
-                //        ));
+                container.AddTransient<IEventStoreConnection[]>(connections);
+                container.AddTransient<IEventStoreClient, EventStoreClient>();
+                container.AddTransient<IStoreEvents, StoreEvents>();
+                container.AddTransient<IEventStoreConsumer, EventStoreConsumer>();
+
 
                 return Task.CompletedTask;
             });
