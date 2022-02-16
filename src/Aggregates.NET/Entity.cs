@@ -93,7 +93,7 @@ namespace Aggregates
         {
             try
             {
-                return ChildrenTracker.GetChildren<TEntity, TThis>(this as TThis);
+                return ChildrenTracker.GetChildren<TEntity, TThis>(Uow, this as TThis);
             }
             catch
             {

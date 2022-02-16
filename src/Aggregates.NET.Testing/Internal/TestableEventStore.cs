@@ -75,7 +75,14 @@ namespace Aggregates.Internal
                 throw new ArgumentException("undefined stream");
             return Task.FromResult(_events[key].Reverse().ToArray());
         }
-
+        public Task<ISnapshot> GetSnapshot<TEntity>(string bucket, Id streamId, Id[] parents) where TEntity : IEntity
+        {
+            throw new NotImplementedException();
+        }
+        public Task WriteSnapshot<TEntity>(ISnapshot snapshot, IDictionary<string, string> commitHeaders) where TEntity : IEntity
+        {
+            throw new NotImplementedException();
+        }
         public Task<string> GetMetadata<TEntity>(string bucket, Id streamId, Id[] parents, string key) where TEntity : IEntity
         {
             throw new NotImplementedException();

@@ -49,6 +49,10 @@ namespace Aggregates.Internal
 
             _csc = new CancellationTokenSource();
 
+            _connections = new Dictionary<string, (IEventStoreClient.Status Status, IPEndPoint endpoint, IEventStoreConnection Connection)>();
+            _subscriptions = new List<EventStoreCatchUpSubscription>();
+            _persistentSubs = new List<EventStorePersistentSubscriptionBase>();
+
             foreach (var connection in connections)
             {
                 connection.connection.Connected += Connection_Connected;

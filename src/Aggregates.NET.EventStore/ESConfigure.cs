@@ -86,20 +86,21 @@ namespace Aggregates
             {
 
 
-                var subscribers = provider.GetServices<IEventSubscriber>();
+                var subscriber = provider.GetService<IEventSubscriber>();
 
-                await subscribers.WhenAllAsync(x => x.Setup(
+                await subscriber.Setup(
                     settings.Endpoint,
                     Assembly.GetEntryAssembly().GetName().Version)
-                ).ConfigureAwait(false);
+                .ConfigureAwait(false);
 
-                await subscribers.WhenAllAsync(x => x.Connect()).ConfigureAwait(false);
+                await subscriber.Connect().ConfigureAwait(false);
 
                 // Only setup children projection if client wants it
                 if (settings.TrackChildren)
                 {
                     var tracker = provider.GetService<ITrackChildren>();
-                    await tracker.Setup(settings.Endpoint, Assembly.GetEntryAssembly().GetName().Version).ConfigureAwait(false);
+                    // Use Aggregates.net version because its our children projection nothing to do with user code
+                    await tracker.Setup(settings.Endpoint, Assembly.GetExecutingAssembly().GetName().Version).ConfigureAwait(false);
                 }
 
             });

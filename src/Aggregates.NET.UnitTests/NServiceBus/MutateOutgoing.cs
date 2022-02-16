@@ -21,7 +21,7 @@ namespace Aggregates.NServiceBus
         public async Task ShouldMutateMessage()
         {
             var mutator = new FakeMutator();
-            A.CallTo(() => Provider.GetService(typeof(IEnumerable<IMutate>))).Returns(new[] { mutator });
+            Inject<IMutate[]>(new[] { mutator });
 
             var next = A.Fake<Func<Task>>();
             var context = new TestableOutgoingLogicalMessageContext();
