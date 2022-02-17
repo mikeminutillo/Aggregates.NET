@@ -23,6 +23,7 @@ namespace Aggregates.Sagas
             public Aggregates.Messages.ICommand[] Commands { get; set; }
             public Aggregates.Messages.ICommand[] AbortCommands { get; set; }
         }
+        [Versioned("TimeoutMessage", "Aggregates")]
         public class TimeoutMessage : Messages.IMessage
         {
             public string SagaId { get; set; }
