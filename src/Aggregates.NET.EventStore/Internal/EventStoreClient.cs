@@ -288,7 +288,7 @@ namespace Aggregates.Internal
                         if (!string.Equals(fixedExisting, fixedDefinition, StringComparison.OrdinalIgnoreCase))
                         {
                             Logger.FatalEvent("Initialization",
-                                $"Projection [{name}] already exists and is a different version! If you've upgraded your code don't forget to bump your app's version!\nExisting:\n{existing}\nDesired:\n{definition}");
+                                "Projection [{Name}] already exists and is a different version! If you've upgraded your code don't forget to bump your app's version!\nExisting:\n{Existing}\nDesired:\n{Definition}", name, existing, definition);
                             throw new EndpointVersionException(name, existing, definition);
                         }
                     }
