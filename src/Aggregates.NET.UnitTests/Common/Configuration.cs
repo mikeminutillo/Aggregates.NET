@@ -150,7 +150,6 @@ namespace Aggregates.Common
                 config.SetReadSize(1);
                 config.SetCompression(Compression.All);
                 config.SetUniqueAddress("test");
-                config.SetPassive();
             }).ConfigureAwait(false);
 
             config.Settings.Endpoint.Should().Be("test");
@@ -160,7 +159,6 @@ namespace Aggregates.Common
             config.Settings.ReadSize.Should().Be(1);
             config.Settings.Compression.Should().Be(Compression.All);
             config.Settings.UniqueAddress.Should().Be("test");
-            config.Settings.Passive.Should().BeTrue();
         }
 
     }

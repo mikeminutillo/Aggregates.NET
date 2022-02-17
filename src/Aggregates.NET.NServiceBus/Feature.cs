@@ -30,15 +30,13 @@ namespace Aggregates
 
             context.Pipeline.Register<FailureReplyRegistration>();
 
-            if (!aggSettings.Passive)
-            {
-                context.Pipeline.Register<UowRegistration>();
-                context.Pipeline.Register<CommandAcceptorRegistration>();
-                context.Pipeline.Register<SagaBehaviourRegistration>();
+            context.Pipeline.Register<UowRegistration>();
+            context.Pipeline.Register<CommandAcceptorRegistration>();
+            context.Pipeline.Register<SagaBehaviourRegistration>();
 
-                // Remove NSBs unit of work since we do it ourselves
-                context.Pipeline.Remove("ExecuteUnitOfWork");
-            }
+            // Remove NSBs unit of work since we do it ourselves
+            context.Pipeline.Remove("ExecuteUnitOfWork");
+
 
             context.Pipeline.Register<LogContextProviderRegistration>();
 
