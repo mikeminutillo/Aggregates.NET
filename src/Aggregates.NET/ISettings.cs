@@ -26,7 +26,6 @@ namespace Aggregates
         int Retries { get; }
 
         bool AllEvents { get; }
-        bool Passive { get; }
         bool TrackChildren { get; }
 
         // Disable certain "production" features related to versioning 

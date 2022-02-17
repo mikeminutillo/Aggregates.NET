@@ -4,6 +4,7 @@ using Aggregates.Extensions;
 using Aggregates.Internal;
 using Aggregates.Messages;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using System;
@@ -36,7 +37,6 @@ namespace Aggregates.Internal
         public int Retries { get; internal set; }
 
         public bool AllEvents { get; internal set; }
-        public bool Passive { get; internal set; }
         public bool TrackChildren { get; internal set; }
 
         // Disable certain "production" features related to versioning 
@@ -76,28 +76,18 @@ namespace Aggregates.Internal
                 container.AddSingleton<IRandomProvider>(new RealRandomProvider());
                 container.AddSingleton<ITimeProvider>(new RealTimeProvider());
 
-                // Provide a "default" logger so user doesnt need to provide if they dont want to
-                //container.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
-
                 container.AddTransient<IProcessor, Processor>();
                 container.AddSingleton<IVersionRegistrar, VersionRegistrar>();
 
-                if (!settings.Passive)
-                {
-                    // A library which managing UOW needs to register the domain unit of work. 
-                    // DI containers are designed to append registrations if multiple are present
-                    //container.Register<UnitOfWork.IDomain, Internal.UnitOfWork>(Lifestyle.UnitOfWork);
+                container.AddTransient<IRepositoryFactory, RepositoryFactory>();
+                container.AddTransient<IStoreSnapshots, StoreSnapshots>();
+                container.AddTransient<IStoreEntities, StoreEntities>();
+                container.AddTransient<IEventSubscriber, EventSubscriber>();
 
-                    container.AddTransient<IRepositoryFactory, RepositoryFactory>();
-                    container.AddTransient<IStoreSnapshots, StoreSnapshots>();
-                    container.AddTransient<IStoreEntities, StoreEntities>();
-                    container.AddTransient<IEventSubscriber, EventSubscriber>();
+                container.AddTransient<IEventSubscriber, EventSubscriber>();
 
-                    container.AddTransient<IEventSubscriber, EventSubscriber>();
+                container.AddTransient<ITrackChildren, TrackChildren>();
 
-                    container.AddTransient<ITrackChildren, TrackChildren>();
-
-                }
                 container.AddSingleton<IMetrics, NullMetrics>();
 
                 container.AddSingleton<StreamIdGenerator>(Generator);
@@ -165,15 +155,6 @@ namespace Aggregates.Internal
             CommandDestination = destination;
             return this;
         }
-        /// <summary>
-        /// Passive means the endpoint doesn't need a unit of work, it won't process events or commands
-        /// </summary>
-        /// <returns></returns>
-        public Settings SetPassive()
-        {
-            Passive = true;
-            return this;
-        }
         public Settings ReceiveAllEvents()
         {
             AllEvents = true;
@@ -209,8 +190,8 @@ namespace Aggregates.Internal
         {
             RegistrationTasks.Add((container, settings) =>
             {
-                container.AddTransient<Aggregates.UnitOfWork.IUnitOfWork>(factory => factory.GetRequiredService<Aggregates.UnitOfWork.IApplicationUnitOfWork>());
-                container.AddTransient<Aggregates.UnitOfWork.IApplicationUnitOfWork, TImplementation>();
+                container.AddScoped<Aggregates.UnitOfWork.IUnitOfWork>(factory => factory.GetRequiredService<Aggregates.UnitOfWork.IApplicationUnitOfWork>());
+                container.AddScoped<Aggregates.UnitOfWork.IApplicationUnitOfWork, TImplementation>();
                 return Task.CompletedTask;
             });
             return this;
@@ -219,8 +200,31 @@ namespace Aggregates.Internal
         {
             RegistrationTasks.Add((container, settings) =>
             {
-                container.AddTransient<Aggregates.UnitOfWork.IUnitOfWork>(factory => factory.GetRequiredService<Aggregates.UnitOfWork.IDomainUnitOfWork>());
-                container.AddTransient<Aggregates.UnitOfWork.IDomainUnitOfWork, Internal.UnitOfWork>();
+                container.AddScoped<Aggregates.UnitOfWork.IDomainUnitOfWork, Internal.UnitOfWork>();
+                container.AddScoped<Aggregates.UnitOfWork.IUnitOfWork>(factory => factory.GetRequiredService<Aggregates.UnitOfWork.IDomainUnitOfWork>());
+
+                var descriptor = new ServiceDescriptor(typeof(IMutate), factory => factory.GetRequiredService<Aggregates.UnitOfWork.IDomainUnitOfWork>(), ServiceLifetime.Transient);
+                container.TryAddEnumerable(descriptor);
+                return Task.CompletedTask;
+            });
+            return this;
+        }
+        public Settings AddMutator<TMutate>() where TMutate : IMutate
+        {
+            RegistrationTasks.Add((container, settings) =>
+            {
+                var descriptor = new ServiceDescriptor(typeof(IMutate), typeof(TMutate), ServiceLifetime.Transient);
+                container.TryAddEnumerable(descriptor);
+                return Task.CompletedTask;
+            });
+            return this;
+        }
+        public Settings AddMutator(IMutate mutate)
+        {
+            RegistrationTasks.Add((container, settings) =>
+            {
+                var descriptor = new ServiceDescriptor(typeof(IMutate), (_) => mutate, ServiceLifetime.Transient);
+                container.TryAddEnumerable(descriptor);
                 return Task.CompletedTask;
             });
             return this;

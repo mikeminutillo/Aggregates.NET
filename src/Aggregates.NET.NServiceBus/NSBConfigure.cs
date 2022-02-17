@@ -66,6 +66,7 @@ namespace Aggregates
 
                 container.AddSingleton<IMessageSession>((_) => Bus.Instance);
 
+
                 var nsbSettings = endpointConfig.GetSettings();
 
                 nsbSettings.Set("SlowAlertThreshold", config.SlowAlertThreshold);
