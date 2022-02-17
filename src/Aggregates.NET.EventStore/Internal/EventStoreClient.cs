@@ -78,10 +78,13 @@ namespace Aggregates.Internal
 
         public bool Connected => _connections.Any() && _connections.All(x => x.Value.Status == IEventStoreClient.Status.Connected);
 
-        public Task Connect()
+        public async Task Connect()
         {
             Logger.InfoEvent("Connect", "Connecting to eventstore [{Servers}]", _connections.Select(x => x.Value.endpoint.ToString()).Aggregate((cur,next) => $"{cur}, {next}"));
-            return Task.WhenAll(_connections.Select(x => x.Value.Connection.ConnectAsync()));
+            await Task.WhenAll(_connections.Select(x => x.Value.Connection.ConnectAsync())).ConfigureAwait(false);
+
+            while (!Connected)
+                await Task.Delay(100);
         }
         public async Task Close()
         {
