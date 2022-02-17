@@ -71,6 +71,8 @@ namespace Aggregates
 
                 await connection.Connect().ConfigureAwait(false);
 
+                await Task.Delay(10000);
+
                 var subscriber = provider.GetRequiredService<IEventSubscriber>();
 
                 await subscriber.Setup(
