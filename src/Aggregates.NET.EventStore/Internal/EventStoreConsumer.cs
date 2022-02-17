@@ -35,6 +35,7 @@ namespace Aggregates.Internal
 
         public async Task SetupProjection(string endpoint, Version version, Type[] eventTypes)
         {
+
             // Dont use "-" we dont need category projection projecting our projection
             var stream = $"{endpoint}.{version}".Replace("-", "");
 

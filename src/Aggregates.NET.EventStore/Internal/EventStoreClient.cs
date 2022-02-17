@@ -111,6 +111,9 @@ namespace Aggregates.Internal
 
         public Task<bool> SubscribeToStreamStart(string stream, IEventStoreClient.EventAppeared callback)
         {
+            if (!Connected)
+                throw new InvalidOperationException("Eventstore is not connected");
+
             var clientsToken = CancellationTokenSource.CreateLinkedTokenSource(_csc.Token);
             foreach (var connection in _connections)
             {
@@ -142,6 +145,9 @@ namespace Aggregates.Internal
 
         public async Task<bool> SubscribeToStreamEnd(string stream, IEventStoreClient.EventAppeared callback)
         {
+            if (!Connected)
+                throw new InvalidOperationException("Eventstore is not connected");
+
             var clientsToken = CancellationTokenSource.CreateLinkedTokenSource(_csc.Token);
             foreach (var connection in _connections)
             {
@@ -179,6 +185,8 @@ namespace Aggregates.Internal
 
         public async Task<bool> ConnectPinnedPersistentSubscription(string stream, string group, IEventStoreClient.EventAppeared callback)
         {
+            if (!Connected)
+                throw new InvalidOperationException("Eventstore is not connected");
 
             var settings = PersistentSubscriptionSettings.Create()
                 .WithMaxRetriesOf(_settings.Retries)
@@ -228,6 +236,9 @@ namespace Aggregates.Internal
 
         public async Task<bool> EnableProjection(string name)
         {
+            if (!Connected)
+                throw new InvalidOperationException("Eventstore is not connected");
+
             foreach (var connection in _connections)
             {
                 var httpSchema = getHttpSchema(connection.Value.Connection.Settings);
@@ -251,6 +262,9 @@ namespace Aggregates.Internal
 
         public async Task<bool> CreateProjection(string name, string definition)
         {
+            if (!Connected)
+                throw new InvalidOperationException("Eventstore is not connected");
+
             // Normalize new lines
             definition = definition.Replace(Environment.NewLine, "\n");
 
