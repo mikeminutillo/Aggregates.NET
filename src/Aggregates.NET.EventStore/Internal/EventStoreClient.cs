@@ -14,6 +14,7 @@ using Aggregates.Exceptions;
 using Aggregates.Messages;
 using EventStore.ClientAPI.Projections;
 using System.Text.RegularExpressions;
+using System.Collections.Concurrent;
 
 namespace Aggregates.Internal
 {
@@ -28,7 +29,7 @@ namespace Aggregates.Internal
         private readonly IEventMapper _mapper;
         private readonly IEnumerable<IMutate> _mutators;
 
-        private readonly Dictionary<string, (IEventStoreClient.Status Status, IPEndPoint endpoint, IEventStoreConnection Connection)> _connections;
+        private readonly ConcurrentDictionary<string, (IEventStoreClient.Status Status, IPEndPoint endpoint, IEventStoreConnection Connection)> _connections;
 
         private readonly object _subLock = new object();
         private readonly List<EventStoreCatchUpSubscription> _subscriptions;
@@ -49,7 +50,7 @@ namespace Aggregates.Internal
 
             _csc = new CancellationTokenSource();
 
-            _connections = new Dictionary<string, (IEventStoreClient.Status Status, IPEndPoint endpoint, IEventStoreConnection Connection)>();
+            _connections = new ConcurrentDictionary<string, (IEventStoreClient.Status Status, IPEndPoint endpoint, IEventStoreConnection Connection)>();
             _subscriptions = new List<EventStoreCatchUpSubscription>();
             _persistentSubs = new List<EventStorePersistentSubscriptionBase>();
 
@@ -79,7 +80,7 @@ namespace Aggregates.Internal
 
         public Task Connect()
         {
-            Logger.InfoEvent("Connect", "Connecting to eventstore {Servers}", _connections.Select(x => x.Value.endpoint.ToString()).Aggregate((cur,next) => $"{cur}, {next}"));
+            Logger.InfoEvent("Connect", "Connecting to eventstore [{Servers}]", _connections.Select(x => x.Value.endpoint.ToString()).Aggregate((cur,next) => $"{cur}, {next}"));
             return Task.WhenAll(_connections.Select(x => x.Value.Connection.ConnectAsync()));
         }
         public async Task Close()

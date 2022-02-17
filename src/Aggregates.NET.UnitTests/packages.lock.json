@@ -123,8 +123,8 @@
       },
       "EventStore.Client": {
         "type": "Transitive",
-        "resolved": "21.2.0",
-        "contentHash": "0Us2qjfY96lDuJtWRb4p3SrpQLt51HureB6JR/uJOf7SAeP4Yi179gQnrMxoNuOKnsfIyFo+xJ9w5zsRP62CmA==",
+        "resolved": "20.10.0",
+        "contentHash": "4RpF1jnxOhya1VK0JAaBlbkMi8DbG2Tp/oWrWjsIbjc0kT8xTWE1pgXuhKv0OyDHDqwfiLE/1hceLyIzPZke/w==",
         "dependencies": {
           "Microsoft.NETFramework.ReferenceAssemblies": "1.0.0",
           "Newtonsoft.Json": "11.0.2",
@@ -1444,7 +1444,7 @@
         "type": "Project",
         "dependencies": {
           "Aggregates.NET": "1.0.0",
-          "EventStore.Client": "21.2.0",
+          "EventStore.Client": "20.10.0",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "6.0.0",
           "Microsoft.Extensions.Logging.Abstractions": "6.0.0"
         }
