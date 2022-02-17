@@ -26,7 +26,7 @@ namespace Aggregates.Internal
         private readonly ISettings _settings;
         private readonly IMetrics _metrics;
         private readonly IEventMapper _mapper;
-        private readonly IMutate[] _mutators;
+        private readonly IEnumerable<IMutate> _mutators;
 
         private readonly Dictionary<string, (IEventStoreClient.Status Status, IPEndPoint endpoint, IEventStoreConnection Connection)> _connections;
 
@@ -37,7 +37,7 @@ namespace Aggregates.Internal
         private readonly CancellationTokenSource _csc;
         private bool _disposed;
 
-        public EventStoreClient(ILogger<EventStoreClient> logger, IMessageSerializer serializer, IVersionRegistrar registrar, ISettings settings, IMetrics metrics, IEventMapper mapper, IMutate[] mutators, (IPEndPoint endpoint, IEventStoreConnection connection)[] connections)
+        public EventStoreClient(ILogger<EventStoreClient> logger, IMessageSerializer serializer, IVersionRegistrar registrar, ISettings settings, IMetrics metrics, IEventMapper mapper, IEnumerable<IMutate> mutators, (IPEndPoint endpoint, IEventStoreConnection connection)[] connections)
         {
             Logger = logger;
             _serializer = serializer;

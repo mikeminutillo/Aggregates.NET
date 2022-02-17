@@ -15,9 +15,9 @@ namespace Aggregates.Internal
     public class MutateIncoming : Behavior<IIncomingLogicalMessageContext>
     {
         private readonly ILogger Logger;
-        private readonly IMutate[] _mutators;
+        private readonly IEnumerable<IMutate> _mutators;
 
-        public MutateIncoming(ILogger<MutateIncoming> logger, IMutate[] mutators)
+        public MutateIncoming(ILogger<MutateIncoming> logger, IEnumerable<IMutate> mutators)
         {
             Logger = logger;
             _mutators = mutators;

@@ -16,9 +16,9 @@ namespace Aggregates.Internal
     {
         private readonly ILogger Logger;
 
-        private readonly IMutate[] _mutators;
+        private readonly IEnumerable<IMutate> _mutators;
 
-        public MutateOutgoing(ILogger<MutateOutgoing> logger, IMutate[] mutators)
+        public MutateOutgoing(ILogger<MutateOutgoing> logger, IEnumerable<IMutate> mutators)
         {
             Logger = logger;
             _mutators = mutators;

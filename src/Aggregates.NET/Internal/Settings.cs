@@ -203,8 +203,7 @@ namespace Aggregates.Internal
                 container.AddScoped<Aggregates.UnitOfWork.IDomainUnitOfWork, Internal.UnitOfWork>();
                 container.AddScoped<Aggregates.UnitOfWork.IUnitOfWork>(factory => factory.GetRequiredService<Aggregates.UnitOfWork.IDomainUnitOfWork>());
 
-                var descriptor = ServiceDescriptor.Transient<IMutate>(factory => factory.GetRequiredService<Aggregates.UnitOfWork.IDomainUnitOfWork>());
-                container.Add(descriptor);
+                container.AddTransient<IMutate>(factory => factory.GetRequiredService<Aggregates.UnitOfWork.IDomainUnitOfWork>());
                 return Task.CompletedTask;
             });
             return this;
@@ -212,9 +211,8 @@ namespace Aggregates.Internal
         public Settings AddMutator<TMutate>() where TMutate : class, IMutate
         {
             RegistrationTasks.Add((container, settings) =>
-            {                
-                var descriptor = ServiceDescriptor.Transient<IMutate, TMutate>();
-                container.Add(descriptor);
+            {
+                container.AddTransient<IMutate, TMutate>();
                 return Task.CompletedTask;
             });
             return this;
@@ -223,8 +221,7 @@ namespace Aggregates.Internal
         {
             RegistrationTasks.Add((container, settings) =>
             {
-                var descriptor = ServiceDescriptor.Transient<IMutate>(_ => mutate);
-                container.Add(descriptor);
+                container.AddTransient<IMutate>(_ => mutate);
                 return Task.CompletedTask;
             });
             return this;
