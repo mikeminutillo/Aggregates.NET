@@ -61,6 +61,7 @@ when({{
 {2}
 }});";
 
+            Logger.DebugEvent("Setup", "Setup event projection");
             var appDefinition = string.Format(definition, $"'{StreamTypes.Domain}'", stream, functions);
             await _client.CreateProjection($"{stream}.app.projection", appDefinition).ConfigureAwait(false);
         }
@@ -160,6 +161,7 @@ fromCategory('{0}')
             // Dont use "-" we dont need category projection projecting our projection
             var stream = $"{endpoint}.{version}".Replace("-", "");
 
+            Logger.DebugEvent("Connect", "Connecting to event projection {Stream}", stream);
             await _client.ConnectPinnedPersistentSubscription(stream, endpoint,
                 (eventStream, eventNumber, @event) =>
                 {

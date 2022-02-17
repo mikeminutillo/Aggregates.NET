@@ -69,11 +69,11 @@ namespace Aggregates
             {
 
 
-                var subscriber = provider.GetService<IEventSubscriber>();
+                var subscriber = provider.GetRequiredService<IEventSubscriber>();
 
                 await subscriber.Setup(
                     settings.Endpoint,
-                    Assembly.GetEntryAssembly().GetName().Version)
+                    settings.EndpointVersion)
                 .ConfigureAwait(false);
 
                 await subscriber.Connect().ConfigureAwait(false);
@@ -83,15 +83,15 @@ namespace Aggregates
                 {
                     var tracker = provider.GetService<ITrackChildren>();
                     // Use Aggregates.net version because its our children projection nothing to do with user code
-                    await tracker.Setup(settings.Endpoint, Assembly.GetExecutingAssembly().GetName().Version).ConfigureAwait(false);
+                    await tracker.Setup(settings.Endpoint, settings.AggregatesVersion).ConfigureAwait(false);
                 }
 
             });
             Settings.ShutdownTasks.Add(async (container, settings) =>
             {
-                var subscribers = container.GetServices<IEventSubscriber>();
+                var subscriber = container.GetRequiredService<IEventSubscriber>();
 
-                await subscribers.WhenAllAsync(x => x.Shutdown()).ConfigureAwait(false);
+                await subscriber.Shutdown();
             });
 
             return config;

@@ -58,14 +58,13 @@ namespace Aggregates.Internal
                 return;
             }
 
-            // Dont use "-" we dont need category projection projecting our projection
-            var stream = $"{_endpoint}.{_version}".Replace("-", "");
-
+            Logger.InfoEvent("Setup", "Setup projection for discovered events {Events}", discoveredEvents.Select(x => x.Name).Aggregate((cur,next) => $"{cur}{Environment.NewLine}{next}"));
             await _consumer.SetupProjection(_endpoint, _version, discoveredEvents.ToArray());
         }
 
         public Task Connect()
         {
+            Logger.InfoEvent("Connect", "Connecting to event projection");
             return _consumer.ConnectToProjection(_endpoint, _version, onEvent);
         }
         public Task Shutdown()

@@ -84,8 +84,6 @@ namespace Aggregates.Internal
                 container.AddTransient<IStoreEntities, StoreEntities>();
                 container.AddTransient<IEventSubscriber, EventSubscriber>();
 
-                container.AddTransient<IEventSubscriber, EventSubscriber>();
-
                 container.AddTransient<ITrackChildren, TrackChildren>();
 
                 container.AddSingleton<IMetrics, NullMetrics>();
