@@ -58,7 +58,7 @@ namespace Aggregates.Internal
                 return;
             }
 
-            Logger.InfoEvent("Setup", "Setup projection for discovered events {Events}", discoveredEvents.Select(x => x.Name).Aggregate((cur,next) => $"{cur}{Environment.NewLine}{next}"));
+            Logger.InfoEvent("Setup", "Setup projection for discovered events\n{Events}", discoveredEvents.Select(x => x.FullName).Aggregate((cur,next) => $"{cur}{Environment.NewLine}{next}"));
             await _consumer.SetupProjection(_endpoint, _version, discoveredEvents.ToArray());
         }
 

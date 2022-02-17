@@ -41,20 +41,20 @@ namespace Aggregates
 
             // Prevents creation of event store connections until Provider is available
             // since logger needs ILogger defined
-            Func<IServiceProvider, IEnumerable<IEventStoreConnection>> connections = (provider) => esSettings._definedConnections.Select(x =>
+            Func<IServiceProvider, IEnumerable<(IPEndPoint endpoint, IEventStoreConnection connection)>> connections = (provider) => esSettings._definedConnections.Select(x =>
             {
                 x.Value.settings
                     .LimitAttemptsForOperationTo(config.Retries)
                     .UseCustomLogger(provider.GetRequiredService<EventStore.ClientAPI.ILogger>())
                     .EnableVerboseLogging();
 
-                return EventStoreConnection.Create(x.Value.settings, x.Value.endpoint, x.Key);
+                return (x.Value.endpoint, EventStoreConnection.Create(x.Value.settings, x.Value.endpoint, x.Key));
             }).ToArray();
 
             Settings.RegistrationTasks.Add((container, settings) =>
             {
                 container.AddSingleton<EventStore.ClientAPI.ILogger, EventStoreLogger>();
-                container.AddTransient<IEnumerable<IEventStoreConnection>>(connections);
+                container.AddTransient<IEnumerable<(IPEndPoint endpoint, IEventStoreConnection connection)>>(connections);
                 container.AddTransient<IEventStoreClient, EventStoreClient>();
                 container.AddTransient<IStoreEvents, StoreEvents>();
                 container.AddTransient<IEventStoreConsumer, EventStoreConsumer>();

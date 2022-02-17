@@ -79,10 +79,12 @@ namespace Aggregates.Internal
 
         public Task Connect()
         {
+            Logger.InfoEvent("Connect", "Connecting to eventstore {Servers}", _connections.Select(x => x.Value.endpoint.ToString()).Aggregate((cur,next) => $"{cur}, {next}"));
             return Task.WhenAll(_connections.Select(x => x.Value.Connection.ConnectAsync()));
         }
         public async Task Close()
         {
+            Logger.InfoEvent("Close", "Shutting down eventstore client, stopping subscriptions");
             foreach (var sub in _subscriptions)
                 sub.Stop(TimeSpan.FromSeconds(5));
             foreach (var sub in _persistentSubs)
