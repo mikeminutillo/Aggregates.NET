@@ -37,7 +37,7 @@ namespace Aggregates.Internal
         private readonly CancellationTokenSource _csc;
         private bool _disposed;
 
-        public EventStoreClient(ILogger<EventStoreClient> logger, IMessageSerializer serializer, IVersionRegistrar registrar, ISettings settings, IMetrics metrics, IEventMapper mapper, IEnumerable<IMutate> mutators, (IPEndPoint endpoint, IEventStoreConnection connection)[] connections)
+        public EventStoreClient(ILogger<EventStoreClient> logger, IMessageSerializer serializer, IVersionRegistrar registrar, ISettings settings, IMetrics metrics, IEventMapper mapper, IEnumerable<IMutate> mutators, IEnumerable<(IPEndPoint endpoint, IEventStoreConnection connection)> connections)
         {
             Logger = logger;
             _serializer = serializer;
