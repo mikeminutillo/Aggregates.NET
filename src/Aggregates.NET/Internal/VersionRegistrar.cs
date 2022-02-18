@@ -50,7 +50,7 @@ namespace Aggregates.Internal
         {
             lock (_sync)
             {
-                foreach (var type in types)
+                foreach (var type in types.Distinct())
                 {
                     var versionInfo = type.GetCustomAttributes().OfType<Versioned>().SingleOrDefault();
                     if (versionInfo == null)

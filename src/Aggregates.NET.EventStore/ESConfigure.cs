@@ -54,7 +54,7 @@ namespace Aggregates
                 x.Value.ConnectionName = $"{x.Key}.Streams";
 
                 var _logger = logFactory.CreateLogger("EventStoreClient");
-                _logger.InfoEvent("Connect", "Connecting to eventstore [{Name}]", x.Key);
+                _logger.InfoEvent("Connect", "Connecting to eventstore as [{Name}]", x.Value.ConnectionName);
                 return new EventStore.Client.EventStoreClient(x.Value);
             }).ToArray();
             Func<IServiceProvider, IEnumerable<EventStore.Client.EventStoreProjectionManagementClient>> projectionConnections = (provider) => esSettings._definedConnections.Select(x =>
@@ -64,7 +64,7 @@ namespace Aggregates
                 x.Value.ConnectionName = $"{x.Key}.Projection";
 
                 var _logger = logFactory.CreateLogger("EventStoreClient");
-                _logger.InfoEvent("Connect", "Connecting to projection eventstore [{Name}]", x.Key);
+                _logger.InfoEvent("Connect", "Connecting to projection eventstore as [{Name}]", x.Value.ConnectionName);
                 return new EventStoreProjectionManagementClient(x.Value);
             });
             Func<IServiceProvider, IEnumerable<EventStore.Client.EventStorePersistentSubscriptionsClient>> persistentSubConnections = (provider) => esSettings._definedConnections.Select(x =>
@@ -74,7 +74,7 @@ namespace Aggregates
                 x.Value.ConnectionName = $"{x.Key}.PersistSub";
 
                 var _logger = logFactory.CreateLogger("EventStoreClient");
-                _logger.InfoEvent("Connect", "Connecting to projection eventstore [{Name}]", x.Key);
+                _logger.InfoEvent("Connect", "Connecting to persistent subscription eventstore as [{Name}]", x.Value.ConnectionName);
                 return new EventStorePersistentSubscriptionsClient(x.Value);
             });
 
@@ -84,7 +84,7 @@ namespace Aggregates
                 container.AddSingleton<IEnumerable<EventStore.Client.EventStoreProjectionManagementClient>>(projectionConnections);
                 container.AddSingleton<IEnumerable<EventStore.Client.EventStorePersistentSubscriptionsClient>>(persistentSubConnections);
 
-                container.AddTransient<IEventStoreClient, Internal.EventStoreClient>();
+                container.AddSingleton<IEventStoreClient, Internal.EventStoreClient>();
                 container.AddTransient<IStoreEvents, StoreEvents>();
                 container.AddTransient<IEventStoreConsumer, EventStoreConsumer>();
 
@@ -96,6 +96,9 @@ namespace Aggregates
             // Todo: when implementing another eventstore, dont copy this, do it a better way
             Settings.StartupTasks.Add(async (provider, settings) =>
             {
+                var connections = provider.GetService<IEnumerable<EventStore.Client.EventStoreClient>>();
+                
+
                 var subscriber = provider.GetRequiredService<IEventSubscriber>();
 
                 await subscriber.Setup(
