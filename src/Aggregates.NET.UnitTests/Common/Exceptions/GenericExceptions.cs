@@ -36,8 +36,8 @@ namespace Aggregates.Common.Exceptions
         [Fact]
         public void ShouldHaveStreamAndClient()
         {
-            var e = new NotFoundException("testStream", new IPEndPoint(IPAddress.Any, 2020));
-            e.Message.Should().ContainAll("testStream", IPAddress.Any.ToString());
+            var e = new NotFoundException("testStream", "test");
+            e.Message.Should().ContainAll("testStream", "test");
         }
         [Fact]
         public void ShouldHaveMessageAndInnerExceptionInPersistenceException()

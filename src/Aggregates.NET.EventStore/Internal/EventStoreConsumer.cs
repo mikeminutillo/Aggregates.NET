@@ -148,7 +148,7 @@ fromCategory('{0}')
             // ES generated stream name
             var fullStream = $"$projections-aggregates.net.children.{version}-{stream}-result";
 
-            var stateEvents = await _client.GetEventsBackwards(fullStream, count: 1).ConfigureAwait(false);
+            var stateEvents = await _client.GetEvents(StreamDirection.Backwards, fullStream, count: 1).ConfigureAwait(false);
             if (!stateEvents.Any())
                 return null;
 

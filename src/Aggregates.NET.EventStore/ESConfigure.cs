@@ -1,7 +1,7 @@
 ﻿using Aggregates.Contracts;
 using Aggregates.Extensions;
 using Aggregates.Internal;
-using EventStore.ClientAPI;
+using EventStore.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
@@ -20,14 +20,20 @@ namespace Aggregates
     {
         public class ESSettings
         {
-            internal Dictionary<string, (IPEndPoint endpoint, ConnectionSettingsBuilder settings)> _definedConnections = new Dictionary<string, (IPEndPoint endpoint, ConnectionSettingsBuilder settings)>();
+            internal Dictionary<string, EventStoreClientSettings> _definedConnections = new Dictionary<string, EventStoreClientSettings>();
 
-            public ESSettings AddClient(ConnectionSettingsBuilder settings, IPEndPoint endpoint, string name)
+            public ESSettings AddClient(string connectionString, string name)
+            {
+                var settings = EventStoreClientSettings.Create(connectionString);
+                return AddClient(settings, name);
+            }
+            public ESSettings AddClient(EventStoreClientSettings settings, string name)
             {
                 if (_definedConnections.ContainsKey(name))
                     throw new ArgumentException($"Eventstore client [{name}] already defined");
+
                 // need to do this because endpoint is not inside the eventstore data we have available
-                _definedConnections[name] = (endpoint, settings);// EventStoreConnection.Create(settings, endpoint, name));
+                _definedConnections[name] = settings;
                 return this;
             }
         }
@@ -41,21 +47,44 @@ namespace Aggregates
 
             // Prevents creation of event store connections until Provider is available
             // since logger needs ILogger defined
-            Func<IServiceProvider, IEnumerable<(IPEndPoint endpoint, IEventStoreConnection connection)>> connections = (provider) => esSettings._definedConnections.Select(x =>
+            Func<IServiceProvider, IEnumerable<EventStore.Client.EventStoreClient>> connections = (provider) => esSettings._definedConnections.Select(x =>
             {
-                x.Value.settings
-                    .LimitAttemptsForOperationTo(config.Retries)
-                    .UseCustomLogger(provider.GetRequiredService<EventStore.ClientAPI.ILogger>())
-                    .EnableVerboseLogging();
+                var logFactory = provider.GetRequiredService<ILoggerFactory>();
+                x.Value.LoggerFactory = logFactory;
+                x.Value.ConnectionName = $"{x.Key}.Streams";
 
-                return (x.Value.endpoint, EventStoreConnection.Create(x.Value.settings, x.Value.endpoint, x.Key));
+                var _logger = logFactory.CreateLogger("EventStoreClient");
+                _logger.InfoEvent("Connect", "Connecting to eventstore [{Name}]", x.Key);
+                return new EventStore.Client.EventStoreClient(x.Value);
             }).ToArray();
+            Func<IServiceProvider, IEnumerable<EventStore.Client.EventStoreProjectionManagementClient>> projectionConnections = (provider) => esSettings._definedConnections.Select(x =>
+            {
+                var logFactory = provider.GetRequiredService<ILoggerFactory>();
+                x.Value.LoggerFactory = logFactory;
+                x.Value.ConnectionName = $"{x.Key}.Projection";
+
+                var _logger = logFactory.CreateLogger("EventStoreClient");
+                _logger.InfoEvent("Connect", "Connecting to projection eventstore [{Name}]", x.Key);
+                return new EventStoreProjectionManagementClient(x.Value);
+            });
+            Func<IServiceProvider, IEnumerable<EventStore.Client.EventStorePersistentSubscriptionsClient>> persistentSubConnections = (provider) => esSettings._definedConnections.Select(x =>
+            {
+                var logFactory = provider.GetRequiredService<ILoggerFactory>();
+                x.Value.LoggerFactory = logFactory;
+                x.Value.ConnectionName = $"{x.Key}.PersistSub";
+
+                var _logger = logFactory.CreateLogger("EventStoreClient");
+                _logger.InfoEvent("Connect", "Connecting to projection eventstore [{Name}]", x.Key);
+                return new EventStorePersistentSubscriptionsClient(x.Value);
+            });
 
             Settings.RegistrationTasks.Add((container, settings) =>
             {
-                container.AddSingleton<EventStore.ClientAPI.ILogger, EventStoreLogger>();
-                container.AddTransient<IEnumerable<(IPEndPoint endpoint, IEventStoreConnection connection)>>(connections);
-                container.AddTransient<IEventStoreClient, EventStoreClient>();
+                container.AddSingleton<IEnumerable<EventStore.Client.EventStoreClient>>(connections);
+                container.AddSingleton<IEnumerable<EventStore.Client.EventStoreProjectionManagementClient>>(projectionConnections);
+                container.AddSingleton<IEnumerable<EventStore.Client.EventStorePersistentSubscriptionsClient>>(persistentSubConnections);
+
+                container.AddTransient<IEventStoreClient, Internal.EventStoreClient>();
                 container.AddTransient<IStoreEvents, StoreEvents>();
                 container.AddTransient<IEventStoreConsumer, EventStoreConsumer>();
 
@@ -67,10 +96,6 @@ namespace Aggregates
             // Todo: when implementing another eventstore, dont copy this, do it a better way
             Settings.StartupTasks.Add(async (provider, settings) =>
             {
-                var connection = provider.GetRequiredService<IEventStoreClient>();
-
-                await connection.Connect().ConfigureAwait(false);
-
                 var subscriber = provider.GetRequiredService<IEventSubscriber>();
 
                 await subscriber.Setup(

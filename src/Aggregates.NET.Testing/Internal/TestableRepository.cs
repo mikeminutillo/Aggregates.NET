@@ -184,7 +184,7 @@ namespace Aggregates.Internal
         {
             id = _ids.MakeId(id);
             var snapshot = await _snapstore.GetSnapshot<TEntity>(bucket, id, parent.GetParentIds()).ConfigureAwait(false);
-            var events = await _eventstore.GetEvents<TEntity>(bucket, id, parent.GetParentIds(), start: snapshot?.Version).ConfigureAwait(false);
+            var events = await _eventstore.GetEvents<TEntity>(StreamDirection.Forwards, bucket, id, parent.GetParentIds(), start: snapshot?.Version).ConfigureAwait(false);
 
             var entity = Factory.Create(Logger, bucket, id, getParents(parent), events.Select(x => x.Event as Messages.IEvent).ToArray(), snapshot?.Payload);
 

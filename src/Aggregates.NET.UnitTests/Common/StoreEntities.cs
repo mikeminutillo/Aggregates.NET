@@ -77,7 +77,7 @@ namespace Aggregates.Common
             var entity = await Sut.Get<FakeEntity, FakeState>("test", "test", null).ConfigureAwait(false);
 
             // Verify GetEvents from version 1 was called
-            A.CallTo(() => eventstore.GetEvents<FakeEntity>(A<string>.Ignored, A<Id>.Ignored, A<Id[]>.Ignored, 1, A<int?>.Ignored)).MustHaveHappened();
+            A.CallTo(() => eventstore.GetEvents<FakeEntity>(A<StreamDirection>.Ignored, A<string>.Ignored, A<Id>.Ignored, A<Id[]>.Ignored, 1, A<int?>.Ignored)).MustHaveHappened();
         }
         [Fact]
         public async Task ShouldGetChildEntity()
