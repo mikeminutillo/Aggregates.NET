@@ -19,6 +19,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Aggregates.Extensions;
 using Aggregates.Messages;
 using NServiceBus.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Aggregates
 {
@@ -58,7 +59,7 @@ namespace Aggregates
 
                 container.AddSingleton<IEventMapper, EventMapper>();
 
-                container.AddScoped<UnitOfWork.IDomainUnitOfWork, NSBUnitOfWork>();
+                container.Replace(ServiceDescriptor.Scoped<UnitOfWork.IDomainUnitOfWork, NSBUnitOfWork>());
 
                 container.AddSingleton<IEventFactory, EventFactory>();
                 container.AddSingleton<IMessageDispatcher, Dispatcher>();
@@ -132,7 +133,7 @@ namespace Aggregates
             Settings.SetupTasks.Add((container, settings) =>
             {
                 var logFactory = container.GetService<ILoggerFactory>();
-                if(logFactory != null)
+                if (logFactory != null)
                     global::NServiceBus.Logging.LogManager.UseFactory(new ExtensionsLoggerFactory(logFactory));
 
                 return Aggregates.Bus.Start(container, startableEndpoint);

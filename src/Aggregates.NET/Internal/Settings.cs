@@ -201,7 +201,7 @@ namespace Aggregates.Internal
                 container.AddScoped<Aggregates.UnitOfWork.IDomainUnitOfWork, Internal.UnitOfWork>();
                 //container.AddScoped<Aggregates.UnitOfWork.IUnitOfWork>(factory => factory.GetRequiredService<Aggregates.UnitOfWork.IDomainUnitOfWork>());
 
-                container.AddTransient<IMutate>(factory => factory.GetRequiredService<Aggregates.UnitOfWork.IDomainUnitOfWork>());
+                //container.AddTransient<IMutate>(factory => factory.GetRequiredService<Aggregates.UnitOfWork.IDomainUnitOfWork>());
                 return Task.CompletedTask;
             });
             return this;
