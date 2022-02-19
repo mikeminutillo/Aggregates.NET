@@ -599,7 +599,7 @@ namespace Aggregates.Internal
                         result = await
                             client.Value.AppendToStreamAsync(stream, StreamState.Any, events)
                                 .ConfigureAwait(false);
-
+                    
                     nextVersion = result.NextExpectedStreamRevision.ToInt64();
                 }
                 catch (WrongExpectedVersionException e)

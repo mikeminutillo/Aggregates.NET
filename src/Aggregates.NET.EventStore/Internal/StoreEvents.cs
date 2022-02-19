@@ -7,6 +7,8 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Aggregates.Contracts;
+using Aggregates.Exceptions;
+using Aggregates.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace Aggregates.Internal
@@ -36,7 +38,18 @@ namespace Aggregates.Internal
         public async Task<ISnapshot> GetSnapshot<TEntity>(string bucket, Id streamId, Id[] parents) where TEntity : IEntity
         {
             var stream = _generator(_registrar.GetVersionedName(typeof(TEntity)), StreamTypes.Snapshot, bucket, streamId, parents);
-            var @event = (await _client.GetEvents(StreamDirection.Backwards, stream, count: 1).ConfigureAwait(false)).FirstOrDefault();
+            IFullEvent @event;
+            try
+            {
+                @event = (await _client.GetEvents(StreamDirection.Backwards, stream, count: 1).ConfigureAwait(false)).First();
+            }
+            catch (NotFoundException)
+            {
+                Logger.DebugEvent("NotFound", "Snapshot for [{Stream:l}] not found", stream);
+                return null;
+            }
+
+            Logger.DebugEvent("Read", "Snapshot for [{Stream:l}] version {Version} found", stream, @event.Descriptor.Version);
             return new Snapshot
             {
                 EntityType = @event.Descriptor.EntityType,
@@ -67,6 +80,7 @@ namespace Aggregates.Internal
                 Event = snapshot.Payload as IState,
             };
 
+            Logger.DebugEvent("Write", "Writing snapshot for [{Stream:l}] version {Version}", stream, snapshot.Version);
             return _client.WriteEvents(stream, new[] { e }, commitHeaders);
         }
 
