@@ -25,7 +25,17 @@ namespace Aggregates.Internal
         private readonly IVersionRegistrar _registrar;
         private readonly ITrackChildren _childTracker;
 
-        public StoreEntities(ILogger<StoreEntities> logger, ISettings settings, IServiceProvider provider, IMetrics metrics, IStoreEvents eventstore, IStoreSnapshots snapstore, IEventFactory factory, IVersionRegistrar registrar, ITrackChildren childTracker)
+        public StoreEntities(
+            ILogger<StoreEntities> logger, 
+            ISettings settings, 
+            IServiceProvider provider, 
+            IMetrics metrics, 
+            IStoreEvents eventstore, 
+            IStoreSnapshots snapstore, 
+            IEventFactory factory, 
+            IVersionRegistrar registrar, 
+            ITrackChildren childTracker
+            )
         {
             Logger = logger;
             _settings = settings;

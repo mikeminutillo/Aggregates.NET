@@ -201,16 +201,19 @@ namespace Aggregates.Internal
                 container.AddScoped<Aggregates.UnitOfWork.IDomainUnitOfWork, Internal.UnitOfWork>();
                 container.AddScoped<Aggregates.UnitOfWork.IUnitOfWork>(factory => factory.GetRequiredService<Aggregates.UnitOfWork.IDomainUnitOfWork>());
 
-                container.AddScoped<IMutate>(factory => factory.GetRequiredService<Aggregates.UnitOfWork.IDomainUnitOfWork>());
+                // IMutate is a depend on IStoreEvents which is used by IUnitOfWork
+                // This causes a dependancy loop!
+                // Break the loop by using Func<IMutate> instead
+                container.AddTransient<Func<IMutate>>(factory => () => factory.GetRequiredService<Aggregates.UnitOfWork.IDomainUnitOfWork>());
                 return Task.CompletedTask;
             });
             return this;
         }
-        public Settings AddMutator<TMutate>() where TMutate : class, IMutate
+        public Settings AddMutator<TMutate>(Func<IServiceProvider, IMutate> factory) where TMutate : class, IMutate
         {
             RegistrationTasks.Add((container, settings) =>
             {
-                container.AddTransient<IMutate, TMutate>();
+                container.AddTransient<Func<IMutate>>(provider => () => factory(provider));
                 return Task.CompletedTask;
             });
             return this;
@@ -219,7 +222,7 @@ namespace Aggregates.Internal
         {
             RegistrationTasks.Add((container, settings) =>
             {
-                container.AddTransient<IMutate>(_ => mutate);
+                container.AddTransient<Func<IMutate>>(_ => () => mutate);
                 return Task.CompletedTask;
             });
             return this;

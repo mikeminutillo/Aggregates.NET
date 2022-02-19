@@ -15,9 +15,9 @@ namespace Aggregates.Internal
     public class MutateIncoming : Behavior<IIncomingLogicalMessageContext>
     {
         private readonly ILogger Logger;
-        private readonly IEnumerable<IMutate> _mutators;
+        private readonly IEnumerable<Func<IMutate>> _mutators;
 
-        public MutateIncoming(ILogger<MutateIncoming> logger, IEnumerable<IMutate> mutators)
+        public MutateIncoming(ILogger<MutateIncoming> logger, IEnumerable<Func<IMutate>> mutators)
         {
             Logger = logger;
             _mutators = mutators;
@@ -37,7 +37,7 @@ namespace Aggregates.Internal
             {
                 try
                 {
-                    mutated = mutator.MutateIncoming(mutated);
+                    mutated = mutator().MutateIncoming(mutated);
                 }
                 catch(Exception e)
                 {

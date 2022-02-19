@@ -18,14 +18,11 @@ namespace Aggregates.Internal
         private readonly StreamIdGenerator _generator;
         private readonly IEventStoreClient _client;
         private readonly IVersionRegistrar _registrar;
-        private readonly IEnumerable<IMutate> _mutators;
-
-        public StoreEvents(ILogger<StoreEvents> logger, StreamIdGenerator generator, IVersionRegistrar registrar, IEnumerable<IMutate> mutators, IEventStoreClient client)
+        public StoreEvents(ILogger<StoreEvents> logger, StreamIdGenerator generator, IVersionRegistrar registrar, IEventStoreClient client)
         {
             _generator = generator;
             _client = client;
             _registrar = registrar;
-            _mutators = mutators;
 
             Logger = logger;
         }

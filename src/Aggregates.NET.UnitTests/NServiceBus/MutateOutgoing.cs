@@ -21,7 +21,7 @@ namespace Aggregates.NServiceBus
         public async Task ShouldMutateMessage()
         {
             var mutator = new FakeMutator();
-            Inject<IEnumerable<IMutate>>(new[] { mutator });
+            Inject<IEnumerable<Func<IMutate>>>(new Func<IMutate>[] { () => mutator });
 
             var next = A.Fake<Func<Task>>();
             var context = new TestableOutgoingLogicalMessageContext();
@@ -37,7 +37,7 @@ namespace Aggregates.NServiceBus
         {
             var mutator = new FakeMutator();
             var provider = Fake<IServiceProvider>();
-            Inject<IEnumerable<IMutate>>(new[] { mutator });
+            Inject<IEnumerable<Func<IMutate>>>(new Func<IMutate>[] { () => mutator });
 
             var next = A.Fake<Func<Task>>();
             var context = new TestableOutgoingLogicalMessageContext();

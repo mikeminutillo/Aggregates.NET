@@ -16,9 +16,9 @@ namespace Aggregates.Internal
     {
         private readonly ILogger Logger;
 
-        private readonly IEnumerable<IMutate> _mutators;
+        private readonly IEnumerable<Func<IMutate>> _mutators;
 
-        public MutateOutgoing(ILogger<MutateOutgoing> logger, IEnumerable<IMutate> mutators)
+        public MutateOutgoing(ILogger<MutateOutgoing> logger, IEnumerable<Func<IMutate>> mutators)
         {
             Logger = logger;
             _mutators = mutators;
@@ -43,7 +43,7 @@ namespace Aggregates.Internal
             {
                 try
                 {
-                    mutated = mutator.MutateOutgoing(mutated);
+                    mutated = mutator().MutateOutgoing(mutated);
                 }
                 catch (Exception ex)
                 {

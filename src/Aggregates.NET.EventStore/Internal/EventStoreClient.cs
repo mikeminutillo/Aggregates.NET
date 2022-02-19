@@ -25,7 +25,7 @@ namespace Aggregates.Internal
         private readonly ISettings _settings;
         private readonly IMetrics _metrics;
         private readonly IEventMapper _mapper;
-        private readonly IEnumerable<IMutate> _mutators;
+        private readonly IEnumerable<Func<IMutate>> _mutators;
 
         private readonly ConcurrentDictionary<string, EventStore.Client.EventStoreClient> _connections;
         private readonly ConcurrentDictionary<string, EventStore.Client.EventStoreProjectionManagementClient> _projectionConnections;
@@ -45,7 +45,7 @@ namespace Aggregates.Internal
             ISettings settings, 
             IMetrics metrics, 
             IEventMapper mapper, 
-            IEnumerable<IMutate> mutators, 
+            IEnumerable<Func<IMutate>> mutators, 
             IEnumerable<EventStore.Client.EventStoreClient> connections, 
             IEnumerable<EventStore.Client.EventStoreProjectionManagementClient> projectionConnections,
             IEnumerable<EventStore.Client.EventStorePersistentSubscriptionsClient> persistentSubConnections
@@ -472,7 +472,7 @@ namespace Aggregates.Internal
                 IMutating mutated = new Mutating(e.Event, e.Descriptor.Headers ?? new Dictionary<string, string>());
 
                 foreach (var mutator in _mutators)
-                    mutated = mutator.MutateOutgoing(mutated);
+                    mutated = mutator().MutateOutgoing(mutated);
 
                 var mappedType = e.Event.GetType();
                 if (!mappedType.IsInterface)
