@@ -386,7 +386,7 @@ namespace Aggregates.Internal
         {
             var shard = Math.Abs(stream.GetHash() % _connections.Count());
 
-            var sliceStart = EventStore.Client.StreamPosition.FromInt64(start ?? StreamPosition.Start);
+            var sliceStart = EventStore.Client.StreamPosition.FromInt64(start ?? (direction == StreamDirection.Forwards ? StreamPosition.Start :StreamPosition.End));
 
             ResolvedEvent[] events;
             var client = _connections.ElementAt(shard);
