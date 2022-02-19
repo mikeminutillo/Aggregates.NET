@@ -392,14 +392,21 @@ namespace Aggregates.Internal
             var client = _connections.ElementAt(shard);
             using (var ctx = _metrics.Begin("EventStore Read Time"))
             {
-                var eventReader = client.Value.ReadStreamAsync((Direction)direction, stream, sliceStart, cancellationToken: _csc.Token);
-                if(await eventReader.ReadState == ReadState.StreamNotFound)
-                    throw new NotFoundException(stream, client.Value.ConnectionName);
+                try
+                {
+                    var eventReader = client.Value.ReadStreamAsync((Direction)direction, stream, sliceStart, cancellationToken: _csc.Token);
+                    if (await eventReader.ReadState == ReadState.StreamNotFound)
+                        throw new NotFoundException(stream, client.Value.ConnectionName);
 
-                if (count.HasValue)
-                    events = await eventReader.Take(count.Value).ToArrayAsync(_csc.Token).ConfigureAwait(false);
-                else
-                    events = await eventReader.ToArrayAsync(_csc.Token).ConfigureAwait(false);
+                    if (count.HasValue)
+                        events = await eventReader.Take(count.Value).ToArrayAsync(_csc.Token).ConfigureAwait(false);
+                    else
+                        events = await eventReader.ToArrayAsync(_csc.Token).ConfigureAwait(false);
+                }
+                catch
+                {
+                    throw new NotFoundException(stream, client.Value.ConnectionName);
+                }
 
                 if (ctx.Elapsed > TimeSpan.FromSeconds(1))
                     Logger.InfoEvent("Slow Alarm", "Reading {Events} events size {Size} stream [{Stream:l}] elapsed {Milliseconds} ms", events.Length, events.Sum(x => x.Event.Data.Length), stream, ctx.Elapsed.TotalMilliseconds);
