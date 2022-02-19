@@ -146,6 +146,7 @@ fromCategory('{0}')
             var stream = _streamIdGen(parentEntityType, StreamTypes.Children, parent.Bucket, parent.Id, parents?.Select(x => x.StreamId).ToArray());
 
             // ES generated stream name
+            // Todo: ES projections lib has a method to get result from projections now
             var fullStream = $"$projections-aggregates.net.children.{version}-{stream}-result";
 
             var stateEvents = await _client.GetEvents(StreamDirection.Backwards, fullStream, count: 1).ConfigureAwait(false);
@@ -163,7 +164,7 @@ fromCategory('{0}')
             var stream = $"{endpoint}.{version}".Replace("-", "");
 
             Logger.DebugEvent("Connect", "Connecting to event projection {Stream}", stream);
-            await _client.ConnectPinnedPersistentSubscription(stream, endpoint,
+            var success = await _client.ConnectPinnedPersistentSubscription(stream, endpoint,
                 (eventStream, eventNumber, @event) =>
                 {
                     var headers = @event.Descriptor.Headers;
@@ -173,6 +174,9 @@ fromCategory('{0}')
 
                     return callback(@event.Event, headers);
                 });
+
+            if (!success)
+                throw new Exception($"Failed to connect to projection {stream}");
         }
 
     }

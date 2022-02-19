@@ -96,9 +96,6 @@ namespace Aggregates
             // Todo: when implementing another eventstore, dont copy this, do it a better way
             Settings.StartupTasks.Add(async (provider, settings) =>
             {
-                var connections = provider.GetService<IEnumerable<EventStore.Client.EventStoreClient>>();
-                
-
                 var subscriber = provider.GetRequiredService<IEventSubscriber>();
 
                 await subscriber.Setup(

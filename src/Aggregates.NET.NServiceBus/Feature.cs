@@ -97,10 +97,7 @@ namespace Aggregates
             }).ConfigureAwait(false);
 
             // Don't stop the bus from completing setup
-            ThreadPool.QueueUserWorkItem(_ =>
-            {
-                Settings.StartupTasks.WhenAllAsync(x => x(_provider, _settings)).Wait();
-            });
+            Task.Run(() => Settings.StartupTasks.WhenAllAsync(x => x(_provider, _settings)));
         }
         protected override async Task OnStop(IMessageSession session)
         {

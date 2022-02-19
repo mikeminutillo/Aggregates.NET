@@ -209,6 +209,8 @@ namespace Aggregates.Internal
                 }
                 catch
                 {
+                    // if one fails they all fail
+                    subCancel.Cancel();
                     return false;
                 }
             }
