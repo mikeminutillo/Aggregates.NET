@@ -22,9 +22,6 @@ namespace Aggregates.Internal
         private readonly IEventMapper _mapper;
         private readonly IVersionRegistrar _registrar;
 
-        // A fake message that will travel through the pipeline in order to process events from the context bag
-        private static readonly byte[] Marker = new byte[] { 0x7b, 0x7d };
-
         public Dispatcher(ILoggerFactory logFactory, IMetrics metrics, IMessageSerializer serializer, IEventMapper mapper, IVersionRegistrar registrar)
         {
             Logger = logFactory.CreateLogger("Dispatcher");
@@ -63,9 +60,7 @@ namespace Aggregates.Internal
             headers = headers ?? new Dictionary<string, string>();
 
             var contextBag = new ContextBag();
-            // Hack to get all the events to invoker without NSB deserializing 
-            contextBag.Set(Defaults.LocalHeader, message.Message);
-
+            var bytes = _serializer.Serialize(message.Message);
 
             var processed = false;
             var numberOfDeliveryAttempts = 0;
@@ -101,7 +96,7 @@ namespace Aggregates.Internal
                 {
                     var messageContext = new MessageContext(messageId,
                         finalHeaders,
-                        Marker, transportTransaction, tokenSource,
+                        bytes, transportTransaction, tokenSource,
                         contextBag);
                     await Bus.OnMessage(messageContext).ConfigureAwait(false);
                     _metrics.Mark("Dispatched Messages", Unit.Message);
