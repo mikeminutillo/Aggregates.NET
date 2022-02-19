@@ -96,8 +96,7 @@ namespace Aggregates
                 x.Instance = Defaults.Instance;
             }).ConfigureAwait(false);
 
-            // Don't stop the bus from completing setup
-            Task.Run(() => Settings.StartupTasks.WhenAllAsync(x => x(_provider, _settings)));
+            await Settings.StartupTasks.WhenAllAsync(x => x(_provider, _settings));
         }
         protected override async Task OnStop(IMessageSession session)
         {
