@@ -53,9 +53,15 @@ namespace Aggregates.Internal
 
                 Aggregates.UnitOfWork.IUnitOfWork uow = null;
                 if (context.Message.Instance is Messages.ICommand)
+                {
                     uow = _provider.GetService<Aggregates.UnitOfWork.IDomainUnitOfWork>();
+                    context.Extensions.Set(uow as Aggregates.UnitOfWork.IDomainUnitOfWork);
+                }
                 else
+                {
                     uow = _provider.GetService<Aggregates.UnitOfWork.IApplicationUnitOfWork>();
+                    context.Extensions.Set(uow as Aggregates.UnitOfWork.IApplicationUnitOfWork);
+                }
 
                 // uow can be null if the message is an event and application unit of work was not defined.
                 // this means the event can still read things but no changes will be committed anywhere
