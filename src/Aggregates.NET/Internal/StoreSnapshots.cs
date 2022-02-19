@@ -26,8 +26,6 @@ namespace Aggregates.Internal
         public async Task<ISnapshot> GetSnapshot<T>(string bucket, Id streamId, Id[] parents) where T : IEntity
         {
             var snapshot = await _store.GetSnapshot<T>(bucket, streamId, parents).ConfigureAwait(false);
-
-            Logger.DebugEvent("GotSnapshot", "Got snapshot for [{Stream:l}] bucket [{Bucket:l}] entity [{EntityType:l}] version {Version}", snapshot.StreamId, snapshot.Bucket, snapshot.EntityType, snapshot.Version);
             return snapshot;
 
         }
