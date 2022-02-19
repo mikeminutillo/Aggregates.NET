@@ -245,7 +245,9 @@ namespace Aggregates.Internal
 
                 try
                 {
-                    await connection.Value.CreateContinuousAsync(name, definition).ConfigureAwait(false);
+                    // todo: the client will eventually have "emit" option
+                    // https://github.com/EventStore/EventStore/pull/3384
+                    await connection.Value.CreateContinuousAsync(name, definition, trackEmittedStreams: true).ConfigureAwait(false);
                 }
                 catch(RpcException e) when (e.StatusCode is StatusCode.AlreadyExists)
                 {
