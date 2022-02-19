@@ -188,8 +188,8 @@ namespace Aggregates.Internal
         {
             RegistrationTasks.Add((container, settings) =>
             {
-                container.AddScoped<Aggregates.UnitOfWork.IUnitOfWork>(factory => factory.GetRequiredService<Aggregates.UnitOfWork.IApplicationUnitOfWork>());
                 container.AddScoped<Aggregates.UnitOfWork.IApplicationUnitOfWork, TImplementation>();
+                //container.AddScoped<Aggregates.UnitOfWork.IUnitOfWork>(factory => factory.GetRequiredService<Aggregates.UnitOfWork.IApplicationUnitOfWork>());
                 return Task.CompletedTask;
             });
             return this;
@@ -199,7 +199,7 @@ namespace Aggregates.Internal
             RegistrationTasks.Add((container, settings) =>
             {
                 container.AddScoped<Aggregates.UnitOfWork.IDomainUnitOfWork, Internal.UnitOfWork>();
-                container.AddScoped<Aggregates.UnitOfWork.IUnitOfWork>(factory => factory.GetRequiredService<Aggregates.UnitOfWork.IDomainUnitOfWork>());
+                //container.AddScoped<Aggregates.UnitOfWork.IUnitOfWork>(factory => factory.GetRequiredService<Aggregates.UnitOfWork.IDomainUnitOfWork>());
 
                 container.AddTransient<IMutate>(factory => factory.GetRequiredService<Aggregates.UnitOfWork.IDomainUnitOfWork>());
                 return Task.CompletedTask;
