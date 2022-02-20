@@ -27,7 +27,8 @@ namespace Aggregates.Internal
                 return next();
 
             // gets the child provider
-            var provider = context.Extensions.Get<IServiceProvider>();
+            if(!context.Extensions.TryGet<IServiceProvider>(out var provider))
+                return next();
             var mutators = provider.GetServices<Func<IMutate>>();
 
             IMutating mutated = new Mutating(context.Message.Instance, context.Headers ?? new Dictionary<string, string>());
