@@ -18,12 +18,13 @@ namespace Aggregates.Internal
             _provider = provider;
         }
 
-        public override Task Invoke(IIncomingPhysicalMessageContext context, Func<Task> next)
+        public override async Task Invoke(IIncomingPhysicalMessageContext context, Func<Task> next)
         {
             using (var child = _provider.CreateScope())
             {
+                context.Extensions.Set(child);
                 context.Extensions.Set(child.ServiceProvider);
-                return next();
+                await next().ConfigureAwait(false);
             }
         }
     }

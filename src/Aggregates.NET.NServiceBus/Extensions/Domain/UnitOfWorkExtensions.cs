@@ -26,8 +26,8 @@ namespace Aggregates.Domain
 
         public static Task SendToSelf(this IMessageHandlerContext context, Messages.ICommand command)
         {
-            var config = context.Extensions.Get<IConfiguration>();
-            var dispatcher = config.ServiceProvider.GetRequiredService<IMessageDispatcher>();
+            var provider = context.Extensions.Get<IServiceProvider>();
+            var dispatcher = provider.GetRequiredService<IMessageDispatcher>();
 
             var message = new FullMessage
             {
