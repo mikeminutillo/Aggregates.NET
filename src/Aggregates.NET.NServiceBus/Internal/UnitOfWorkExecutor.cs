@@ -34,7 +34,7 @@ namespace Aggregates.Internal
         public override async Task Invoke(IIncomingLogicalMessageContext context, Func<Task> next)
         {
             // Child container with resolved domain and app uow used by downstream
-            using (_provider.CreateScope())
+            using (var child = _provider.CreateScope())
             {
 
                 // Only SEND messages deserve a UnitOfWork
@@ -54,12 +54,12 @@ namespace Aggregates.Internal
                 Aggregates.UnitOfWork.IUnitOfWork uow = null;
                 if (context.Message.Instance is Messages.ICommand)
                 {
-                    uow = _provider.GetService<Aggregates.UnitOfWork.IDomainUnitOfWork>();
+                    uow = child.ServiceProvider.GetService<Aggregates.UnitOfWork.IDomainUnitOfWork>();
                     context.Extensions.Set(uow as Aggregates.UnitOfWork.IDomainUnitOfWork);
                 }
                 else
                 {
-                    uow = _provider.GetService<Aggregates.UnitOfWork.IApplicationUnitOfWork>();
+                    uow = child.ServiceProvider.GetService<Aggregates.UnitOfWork.IApplicationUnitOfWork>();
                     context.Extensions.Set(uow as Aggregates.UnitOfWork.IApplicationUnitOfWork);
                 }
 
