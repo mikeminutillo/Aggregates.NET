@@ -30,6 +30,9 @@ namespace Aggregates
 
             context.Pipeline.Register<FailureReplyRegistration>();
 
+            context.Pipeline.Register<MutateIncomingRegistration>();
+            context.Pipeline.Register<MutateOutgoingRegistration>();
+
             context.Pipeline.Register<UowRegistration>();
             context.Pipeline.Register<CommandAcceptorRegistration>();
             context.Pipeline.Register<SagaBehaviourRegistration>();
@@ -51,8 +54,6 @@ namespace Aggregates
             foreach (var type in types.Where(IsServiceHandler))
                 context.Container.ConfigureComponent(type, DependencyLifecycle.InstancePerCall);
 
-            context.Pipeline.Register<MutateIncomingRegistration>();
-            context.Pipeline.Register<MutateOutgoingRegistration>();
 
             // We are sending IEvents, which NSB doesn't like out of the box - so turn that check off
             context.Pipeline.Remove("EnforceSendBestPractices");

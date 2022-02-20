@@ -127,7 +127,7 @@ namespace Aggregates.Internal
             factoryMethod: (b) => new UnitOfWorkExecutor(b.Build<ILogger<UnitOfWorkExecutor>>(), b.Build<ISettings>(), b.Build<IServiceProvider>(), b.Build<IMetrics>())
         )
         {
-            InsertAfterIfExists("FailureReply");
+            InsertBefore("MutateIncoming");
         }
     }
 }
