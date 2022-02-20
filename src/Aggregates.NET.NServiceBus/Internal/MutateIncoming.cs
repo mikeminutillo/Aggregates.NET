@@ -15,37 +15,39 @@ namespace Aggregates.Internal
     public class MutateIncoming : Behavior<IIncomingLogicalMessageContext>
     {
         private readonly ILogger Logger;
-        private readonly IEnumerable<Func<IMutate>> _mutators;
 
-        public MutateIncoming(ILogger<MutateIncoming> logger, IEnumerable<Func<IMutate>> mutators)
+        public MutateIncoming(ILogger<MutateIncoming> logger)
         {
             Logger = logger;
-            _mutators = mutators;
         }
-        
+
         public override Task Invoke(IIncomingLogicalMessageContext context, Func<Task> next)
         {
             if (context.GetMessageIntent() == MessageIntentEnum.Reply)
                 return next();
 
+            // gets the child provider
+            var provider = context.Extensions.Get<IServiceProvider>();
+            var mutators = provider.GetServices<Func<IMutate>>();
+
             IMutating mutated = new Mutating(context.Message.Instance, context.Headers ?? new Dictionary<string, string>());
 
-            if (!_mutators.Any()) return next();
+            if (!mutators.Any()) return next();
 
 
-            foreach (var mutator in _mutators)
+            foreach (var mutator in mutators)
             {
                 try
                 {
                     mutated = mutator().MutateIncoming(mutated);
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     Logger.WarnEvent("MutateFailure", e, "Failed to run mutator {Mutator}", mutator.GetType().FullName);
                 }
 
             }
-            
+
             foreach (var header in mutated.Headers)
                 context.Headers[header.Key] = header.Value;
             context.UpdateMessageInstance(mutated.Message);

@@ -16,12 +16,9 @@ namespace Aggregates.Internal
     {
         private readonly ILogger Logger;
 
-        private readonly IEnumerable<Func<IMutate>> _mutators;
-
-        public MutateOutgoing(ILogger<MutateOutgoing> logger, IEnumerable<Func<IMutate>> mutators)
+        public MutateOutgoing(ILogger<MutateOutgoing> logger)
         {
             Logger = logger;
-            _mutators = mutators;
         }
         public override Task Invoke(IOutgoingLogicalMessageContext context, Func<Task> next)
         {
@@ -34,12 +31,17 @@ namespace Aggregates.Internal
             if (context.GetMessageIntent() == MessageIntentEnum.Reply)
                 return next();
 
+
+            // gets the child provider
+            var provider = context.Extensions.Get<IServiceProvider>();
+            var mutators = provider.GetServices<Func<IMutate>>();
+
             IMutating mutated = new Mutating(context.Message.Instance, context.Headers ?? new Dictionary<string, string>());
 
-            if (!_mutators.Any()) return next();
+            if (!mutators.Any()) return next();
 
 
-            foreach (var mutator in _mutators)
+            foreach (var mutator in mutators)
             {
                 try
                 {

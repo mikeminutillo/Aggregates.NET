@@ -68,6 +68,7 @@ namespace Aggregates.Internal
 
                 // Set into the context because DI can be slow
                 context.Extensions.Set(uow);
+                context.Extensions.Set(child);
                 context.Extensions.Set(_settings);
                 context.Extensions.Set(_settings.Configuration);
 
