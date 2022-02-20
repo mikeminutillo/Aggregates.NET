@@ -28,6 +28,7 @@ namespace Aggregates
             var settings = context.Settings;
             var aggSettings = settings.Get<ISettings>(NSBDefaults.AggregatesSettings);
 
+            context.Pipeline.Register<ScopedProviderRegistration>();
             context.Pipeline.Register<FailureReplyRegistration>();
 
             context.Pipeline.Register<MutateIncomingRegistration>();

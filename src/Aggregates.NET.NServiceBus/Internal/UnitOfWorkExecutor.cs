@@ -33,90 +33,87 @@ namespace Aggregates.Internal
 
         public override async Task Invoke(IIncomingLogicalMessageContext context, Func<Task> next)
         {
-            // Child container with resolved domain and app uow used by downstream
-            using (var child = _provider.CreateScope())
+            var provider = context.Extensions.Get<IServiceProvider>();
+
+            // Only SEND messages deserve a UnitOfWork
+            if (context.GetMessageIntent() != MessageIntentEnum.Send && context.GetMessageIntent() != MessageIntentEnum.Publish)
             {
+                await next().ConfigureAwait(false);
+                return;
+            }
+            if (context.Message.MessageType == typeof(Messages.Accept) || context.Message.MessageType == typeof(Messages.Reject))
+            {
+                // If this happens the callback for the message took too long (likely due to a timeout)
+                // normall NSB will report an exception for "No Handlers" - this will just log a warning and ignore
+                Logger.WarnEvent("Overdue", "Overdue Accept/Reject {MessageType} callback - your timeouts might be too short", context.Message.MessageType.FullName);
+                return;
+            }
 
-                // Only SEND messages deserve a UnitOfWork
-                if (context.GetMessageIntent() != MessageIntentEnum.Send && context.GetMessageIntent() != MessageIntentEnum.Publish)
+            Aggregates.UnitOfWork.IUnitOfWork uow = null;
+            if (context.Message.Instance is Messages.ICommand)
+            {
+                uow = provider.GetService<Aggregates.UnitOfWork.IDomainUnitOfWork>();
+                context.Extensions.Set(uow as Aggregates.UnitOfWork.IDomainUnitOfWork);
+            }
+            else
+            {
+                uow = provider.GetService<Aggregates.UnitOfWork.IApplicationUnitOfWork>();
+                context.Extensions.Set(uow as Aggregates.UnitOfWork.IApplicationUnitOfWork);
+            }
+
+            // uow can be null if the message is an event and application unit of work was not defined.
+            // this means the event can still read things but no changes will be committed anywhere
+
+            // Set into the context because DI can be slow
+            context.Extensions.Set(uow);
+            context.Extensions.Set(_settings);
+            context.Extensions.Set(_settings.Configuration);
+
+            var commitableUow = uow as Aggregates.UnitOfWork.IBaseUnitOfWork;
+            try
+            {
+                _metrics.Increment("Messages Concurrent", Unit.Message);
+                using (_metrics.Begin("Message Duration"))
                 {
+                    await (commitableUow?.Begin() ?? Task.CompletedTask).ConfigureAwait(false);
+
                     await next().ConfigureAwait(false);
-                    return;
-                }
-                if (context.Message.MessageType == typeof(Messages.Accept) || context.Message.MessageType == typeof(Messages.Reject))
-                {
-                    // If this happens the callback for the message took too long (likely due to a timeout)
-                    // normall NSB will report an exception for "No Handlers" - this will just log a warning and ignore
-                    Logger.WarnEvent("Overdue", "Overdue Accept/Reject {MessageType} callback - your timeouts might be too short", context.Message.MessageType.FullName);
-                    return;
+
+                    await (commitableUow?.End() ?? Task.CompletedTask).ConfigureAwait(false);
+
                 }
 
-                Aggregates.UnitOfWork.IUnitOfWork uow = null;
-                if (context.Message.Instance is Messages.ICommand)
-                {
-                    uow = child.ServiceProvider.GetService<Aggregates.UnitOfWork.IDomainUnitOfWork>();
-                    context.Extensions.Set(uow as Aggregates.UnitOfWork.IDomainUnitOfWork);
-                }
-                else
-                {
-                    uow = child.ServiceProvider.GetService<Aggregates.UnitOfWork.IApplicationUnitOfWork>();
-                    context.Extensions.Set(uow as Aggregates.UnitOfWork.IApplicationUnitOfWork);
-                }
+            }
+            catch (Exception e)
+            {
+                Logger.WarnEvent("UOWException", e, "Received exception while processing message {MessageType}", context.Message.MessageType.FullName);
+                _metrics.Mark("Message Errors", Unit.Errors);
+                var trailingExceptions = new List<Exception>();
 
-                // uow can be null if the message is an event and application unit of work was not defined.
-                // this means the event can still read things but no changes will be committed anywhere
-
-                // Set into the context because DI can be slow
-                context.Extensions.Set(uow);
-                context.Extensions.Set(child);
-                context.Extensions.Set(_settings);
-                context.Extensions.Set(_settings.Configuration);
-
-                var commitableUow = uow as Aggregates.UnitOfWork.IBaseUnitOfWork;
                 try
                 {
-                    _metrics.Increment("Messages Concurrent", Unit.Message);
-                    using (_metrics.Begin("Message Duration"))
-                    {
-                        await (commitableUow?.Begin() ?? Task.CompletedTask).ConfigureAwait(false);
-
-                        await next().ConfigureAwait(false);
-
-                        await (commitableUow?.End() ?? Task.CompletedTask).ConfigureAwait(false);
-
-                    }
-
+                    await (commitableUow?.End(e) ?? Task.CompletedTask).ConfigureAwait(false);
                 }
-                catch (Exception e)
+                catch (Exception endException)
                 {
-                    Logger.WarnEvent("UOWException", e, "Received exception while processing message {MessageType}", context.Message.MessageType.FullName);
-                    _metrics.Mark("Message Errors", Unit.Errors);
-                    var trailingExceptions = new List<Exception>();
-
-                    try
-                    {
-                        await (commitableUow?.End(e) ?? Task.CompletedTask).ConfigureAwait(false);
-                    }
-                    catch (Exception endException)
-                    {
-                        trailingExceptions.Add(endException);
-                    }
-
-
-                    if (trailingExceptions.Any())
-                    {
-                        trailingExceptions.Insert(0, e);
-                        throw new System.AggregateException(trailingExceptions);
-                    }
-                    throw;
-
+                    trailingExceptions.Add(endException);
                 }
-                finally
+
+
+                if (trailingExceptions.Any())
                 {
-                    _metrics.Decrement("Messages Concurrent", Unit.Message);
+                    trailingExceptions.Insert(0, e);
+                    throw new System.AggregateException(trailingExceptions);
                 }
+                throw;
+
+            }
+            finally
+            {
+                _metrics.Decrement("Messages Concurrent", Unit.Message);
             }
         }
+
     }
     [ExcludeFromCodeCoverage]
     internal class UowRegistration : RegisterStep
@@ -128,7 +125,7 @@ namespace Aggregates.Internal
             factoryMethod: (b) => new UnitOfWorkExecutor(b.Build<ILogger<UnitOfWorkExecutor>>(), b.Build<ISettings>(), b.Build<IServiceProvider>(), b.Build<IMetrics>())
         )
         {
-            InsertBefore("MutateIncoming");
+            InsertAfter("FailureReply");
         }
     }
 }

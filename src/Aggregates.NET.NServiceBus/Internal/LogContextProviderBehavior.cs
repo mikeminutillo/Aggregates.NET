@@ -12,13 +12,13 @@ using System.Threading.Tasks;
 namespace Aggregates.Internal
 {
     [ExcludeFromCodeCoverage]
-    internal class LogContextProviderBehaviour : Behavior<IIncomingPhysicalMessageContext>
+    internal class LogContextProviderBehavior : Behavior<IIncomingPhysicalMessageContext>
     {
         private readonly ILogger Logger;
 
         private readonly ISettings _settings;
 
-        public LogContextProviderBehaviour(ILogger<LogContextProviderBehaviour> logger, ISettings settings)
+        public LogContextProviderBehavior(ILogger<LogContextProviderBehavior> logger, ISettings settings)
         {
             Logger = logger;
             _settings = settings;
@@ -59,7 +59,7 @@ namespace Aggregates.Internal
     {
         public LogContextProviderRegistration() : base(
             stepId: "LogContextProvider",
-            behavior: typeof(LogContextProviderBehaviour),
+            behavior: typeof(LogContextProviderBehavior),
             description: "Provides useful scope information to logger")
         {
             InsertBefore("MutateIncomingTransportMessage");
