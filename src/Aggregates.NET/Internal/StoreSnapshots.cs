@@ -43,6 +43,7 @@ namespace Aggregates.Internal
                 EntityType = _registrar.GetVersionedName(typeof(T)),
                 Timestamp = DateTime.UtcNow,
                 Version = state.Version + 1,
+                Parents = state.Parents,
                 Payload = state
             };
             Logger.DebugEvent("WriteSnapshot", "Writing snapshot for [{Stream:l}] bucket [{Bucket:l}] entity [{EntityType:l}] version {Version}", snapshot.StreamId, snapshot.Bucket, snapshot.EntityType, snapshot.Version);
