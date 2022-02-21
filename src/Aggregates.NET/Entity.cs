@@ -103,8 +103,14 @@ namespace Aggregates
 
         void IEntity<TState>.Apply(IEvent @event)
         {
-            State.Apply(@event);
-
+            try
+            {
+                State.Apply(@event);
+            }
+            catch (NoRouteException)
+            {
+                Logger?.DebugEvent("NoRoute", "{State} has no route for {EventType}", typeof(TThis).FullName, @event.GetType().FullName);
+            }
             var newEvent = FullEventFactory.Event(VersionRegistrar, Uow, this, @event);
             _uncommitted.Add(newEvent);
         }

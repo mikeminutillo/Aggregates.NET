@@ -17,9 +17,7 @@ namespace Aggregates.Contracts
 
         IState Snapshot { get; set;  }
         IEvent[] Committed { get; }
-
-        ILogger Logger { get; set; }
-        
+                
         void Apply(IEvent @event);
 
         void SnapshotRestored();
