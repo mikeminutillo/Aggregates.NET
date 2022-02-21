@@ -62,7 +62,7 @@ namespace Aggregates.Internal
         }
         public Task WriteSnapshot<TEntity>(ISnapshot snapshot, IDictionary<string, string> commitHeaders) where TEntity : IEntity
         {
-            var stream = _generator(_registrar.GetVersionedName(typeof(TEntity)), StreamTypes.Snapshot, snapshot.Bucket, snapshot.StreamId, snapshot.Parents.Select(x => x.StreamId).ToArray());
+            var stream = _generator(_registrar.GetVersionedName(typeof(TEntity)), StreamTypes.Snapshot, snapshot.Bucket, snapshot.StreamId, snapshot.Parents?.Select(x => x.StreamId).ToArray());
             var e = new FullEvent
             {
                 Descriptor = new EventDescriptor
