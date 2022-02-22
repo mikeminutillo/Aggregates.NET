@@ -14,18 +14,22 @@ namespace Aggregates.Internal
         private readonly ILogger Logger;
 
         private readonly IStoreEvents _store;
+        private readonly IMessageSerializer _serializer;
         private readonly IVersionRegistrar _registrar;
 
-        public StoreSnapshots(ILogger<StoreSnapshots> logger, IStoreEvents store, IVersionRegistrar registrar)
+        public StoreSnapshots(ILogger<StoreSnapshots> logger, IStoreEvents store, IMessageSerializer serializer, IVersionRegistrar registrar)
         {
             Logger = logger;
             _store = store;
+            _serializer = serializer;
             _registrar = registrar;
         }
 
-        public async Task<ISnapshot> GetSnapshot<T>(string bucket, Id streamId, Id[] parents) where T : IEntity
+        public async Task<ISnapshot> GetSnapshot<TEntity, TState>(string bucket, Id streamId, Id[] parents) where TEntity : IEntity<TState> where TState : class, IState, new()
         {
-            var snapshot = await _store.GetSnapshot<T>(bucket, streamId, parents).ConfigureAwait(false);
+            var snapshot = await _store.GetSnapshot<TEntity>(bucket, streamId, parents).ConfigureAwait(false);
+            // Make a copy of the snapshot for use by user
+            (snapshot.Payload as IState).Snapshot = _serializer.Deserialize<TState>(_serializer.Serialize(snapshot.Payload));
             return snapshot;
 
         }

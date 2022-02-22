@@ -23,7 +23,7 @@ namespace Aggregates.Common
             A.CallTo(() => Provider.GetService(typeof(Aggregates.UnitOfWork.IDomainUnitOfWork))).Returns(fakeuow.FakedObject);
 
             Snapstore = Fake<IStoreSnapshots>();
-            A.CallTo(() => Snapstore.GetSnapshot<FakeEntity>(A<string>.Ignored, A<Id>.Ignored, A<Id[]>.Ignored)).Returns(Task.FromResult((ISnapshot)null));
+            A.CallTo(() => Snapstore.GetSnapshot<FakeEntity, FakeState>(A<string>.Ignored, A<Id>.Ignored, A<Id[]>.Ignored)).Returns(Task.FromResult((ISnapshot)null));
             Inject(Snapstore);
         }
 
@@ -46,7 +46,7 @@ namespace Aggregates.Common
         public async Task ShouldGetEntityNoSnapshot()
         {
             var snapstore = Fake<IStoreSnapshots>();
-            A.CallTo(() => snapstore.GetSnapshot<FakeEntity>(A<string>.Ignored, A<Id>.Ignored, A<Id[]>.Ignored)).Returns(Task.FromResult((ISnapshot)null));
+            A.CallTo(() => snapstore.GetSnapshot<FakeEntity, FakeState>(A<string>.Ignored, A<Id>.Ignored, A<Id[]>.Ignored)).Returns(Task.FromResult((ISnapshot)null));
             Inject(snapstore);
 
             var entity = await Sut.Get<FakeEntity, FakeState>("test", "test", null).ConfigureAwait(false);
@@ -58,7 +58,7 @@ namespace Aggregates.Common
         {
             var snapshot = Fake<ISnapshot>();
             A.CallTo(() => snapshot.Payload).Returns(new FakeState() { ThrowAbandon = true });
-            A.CallTo(() => Snapstore.GetSnapshot<FakeEntity>(A<string>.Ignored, A<Id>.Ignored, A<Id[]>.Ignored)).Returns(Task.FromResult(snapshot));
+            A.CallTo(() => Snapstore.GetSnapshot<FakeEntity, FakeState>(A<string>.Ignored, A<Id>.Ignored, A<Id[]>.Ignored)).Returns(Task.FromResult(snapshot));
 
             var entity = await Sut.Get<FakeEntity, FakeState>("test", "test", null).ConfigureAwait(false);
 
@@ -70,7 +70,7 @@ namespace Aggregates.Common
             var snapshot = Fake<ISnapshot>();
             A.CallTo(() => snapshot.Version).Returns(1);
             A.CallTo(() => snapshot.Payload).Returns(new FakeState() { Version = 1 });
-            A.CallTo(() => Snapstore.GetSnapshot<FakeEntity>(A<string>.Ignored, A<Id>.Ignored, A<Id[]>.Ignored)).Returns(Task.FromResult(snapshot));
+            A.CallTo(() => Snapstore.GetSnapshot<FakeEntity, FakeState>(A<string>.Ignored, A<Id>.Ignored, A<Id[]>.Ignored)).Returns(Task.FromResult(snapshot));
             var eventstore = Fake<IStoreEvents>();
             Inject(eventstore);
 
@@ -84,7 +84,7 @@ namespace Aggregates.Common
         {
             var parent = Fake<IEntity>();
             A.CallTo(() => parent.Id).Returns("parent");
-            A.CallTo(() => Snapstore.GetSnapshot<FakeChildEntity>(A<string>.Ignored, A<Id>.Ignored, A<Id[]>.Ignored)).Returns(Task.FromResult((ISnapshot)null));
+            A.CallTo(() => Snapstore.GetSnapshot<FakeChildEntity, FakeChildState>(A<string>.Ignored, A<Id>.Ignored, A<Id[]>.Ignored)).Returns(Task.FromResult((ISnapshot)null));
 
             var entity = await Sut.Get<FakeChildEntity, FakeChildState>("test", "test", parent).ConfigureAwait(false);
 

@@ -83,7 +83,7 @@ namespace Aggregates.Internal
 
             var parents = getParents(parent);
             // Todo: pass parent instead of Id[]?
-            var snapshot = await _snapstore.GetSnapshot<TEntity>(bucket, id, parents?.Select(x => x.StreamId).ToArray()).ConfigureAwait(false);
+            var snapshot = await _snapstore.GetSnapshot<TEntity, TState>(bucket, id, parents?.Select(x => x.StreamId).ToArray()).ConfigureAwait(false);
             var events = await _eventstore.GetEvents<TEntity>(StreamDirection.Forwards, bucket, id, parents?.Select(x => x.StreamId).ToArray(), start: snapshot?.Version).ConfigureAwait(false);
 
             var entity = factory.Create(Logger, bucket, id, parents, events.Select(x => x.Event).ToArray(), snapshot?.Payload);

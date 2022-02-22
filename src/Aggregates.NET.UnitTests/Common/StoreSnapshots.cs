@@ -19,7 +19,7 @@ namespace Aggregates.Common
             A.CallTo(() => store.GetSnapshot<FakeEntity>(A<string>.Ignored, A<Id>.Ignored, A<Id[]>.Ignored)).Returns(Fake<ISnapshot>());
             Inject(store);
 
-            await Sut.GetSnapshot<FakeEntity>("test", "test", new Id[] { }).ConfigureAwait(false);
+            await Sut.GetSnapshot<FakeEntity, FakeState>("test", "test", new Id[] { }).ConfigureAwait(false);
 
             A.CallTo(() => store.GetSnapshot<FakeEntity>(A<string>.Ignored, A<Id>.Ignored, A<Id[]>.Ignored)).MustHaveHappened();
         }

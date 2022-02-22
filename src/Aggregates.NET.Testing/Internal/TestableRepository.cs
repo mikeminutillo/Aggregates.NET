@@ -183,7 +183,7 @@ namespace Aggregates.Internal
         protected virtual async Task<TEntity> GetUntracked(string bucket, Id id, IEntity parent = null)
         {
             id = _ids.MakeId(id);
-            var snapshot = await _snapstore.GetSnapshot<TEntity>(bucket, id, parent.GetParentIds()).ConfigureAwait(false);
+            var snapshot = await _snapstore.GetSnapshot<TEntity, TState>(bucket, id, parent.GetParentIds()).ConfigureAwait(false);
             var events = await _eventstore.GetEvents<TEntity>(StreamDirection.Forwards, bucket, id, parent.GetParentIds(), start: snapshot?.Version).ConfigureAwait(false);
 
             var entity = Factory.Create(Logger, bucket, id, getParents(parent), events.Select(x => x.Event as Messages.IEvent).ToArray(), snapshot?.Payload);
