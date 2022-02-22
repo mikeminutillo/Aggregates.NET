@@ -43,6 +43,7 @@ namespace Aggregates.Internal
 
             Load(_messaging.GetMessageTypes());
             Load(_messaging.GetEntityTypes());
+            Load(_messaging.GetStateTypes());
         }
         
 
