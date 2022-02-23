@@ -17,6 +17,7 @@ namespace Aggregates.Contracts
         Task<bool> CreateProjection(string name, string definition);
         Task<bool> EnableProjection(string name);
         Task<bool> ConnectPinnedPersistentSubscription(string stream, string group, EventAppeared callback);
+        Task<T> GetProjectionResult<T>(string name, string partition);
 
         Task<IFullEvent[]> GetEvents(StreamDirection direction, string stream, long? start = null, int? count = null);
         Task<long> WriteEvents(string stream, IFullEvent[] events, IDictionary<string, string> commitHeaders, long? expectedVersion = null);

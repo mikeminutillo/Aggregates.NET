@@ -39,14 +39,14 @@ namespace Aggregates.Internal
         private bool _disposed;
 
         public EventStoreClient(
-            ILogger<EventStoreClient> logger, 
-            IMessageSerializer serializer, 
-            IVersionRegistrar registrar, 
-            ISettings settings, 
-            IMetrics metrics, 
-            IEventMapper mapper, 
-            IEnumerable<Func<IMutate>> mutators, 
-            IEnumerable<EventStore.Client.EventStoreClient> connections, 
+            ILogger<EventStoreClient> logger,
+            IMessageSerializer serializer,
+            IVersionRegistrar registrar,
+            ISettings settings,
+            IMetrics metrics,
+            IEventMapper mapper,
+            IEnumerable<Func<IMutate>> mutators,
+            IEnumerable<EventStore.Client.EventStoreClient> connections,
             IEnumerable<EventStore.Client.EventStoreProjectionManagementClient> projectionConnections,
             IEnumerable<EventStore.Client.EventStorePersistentSubscriptionsClient> persistentSubConnections
             )
@@ -123,7 +123,7 @@ namespace Aggregates.Internal
                     lock (_subLock) _subscriptions.Add(subscription);
 
                 }
-                catch 
+                catch
                 {
                     // If one fails, cancel all the others
                     clientsToken.Cancel();
@@ -141,20 +141,20 @@ namespace Aggregates.Internal
                 try
                 {
                     Logger.InfoEvent("EndSubscribe", "Subscribe to end of [{Stream:l}] store [{Store}]", stream, connection.Value.ConnectionName);
-                                        
+
                     var sub = await connection.Value.SubscribeToStreamAsync(
-                        stream, 
+                        stream,
                         EventStore.Client.StreamPosition.End,
                         cancellationToken: clientsToken.Token,
                         eventAppeared: (sub, e, token) => eventAppeared(sub, e, token, callback),
                         subscriptionDropped: (sub, reason, ex) =>
                             subscriptionDropped(sub, reason, ex, clientsToken.Token,
                             () => SubscribeToStreamEnd(stream, callback)
-                        )); 
-                    
+                        ));
+
                     lock (_subLock) _subscriptions.Add(sub);
                 }
-                catch 
+                catch
                 {
                     // If one fails, cancel all the others
                     clientsToken.Cancel();
@@ -168,10 +168,10 @@ namespace Aggregates.Internal
             var start = _settings.DevelopmentMode ? EventStore.Client.StreamPosition.End : EventStore.Client.StreamPosition.Start;
 
             var settings = new PersistentSubscriptionSettings(
-                resolveLinkTos: true, 
-                startFrom: start, 
-                extraStatistics: _settings.ExtraStats, 
-                maxRetryCount: _settings.Retries, 
+                resolveLinkTos: true,
+                startFrom: start,
+                extraStatistics: _settings.ExtraStats,
+                maxRetryCount: _settings.Retries,
                 namedConsumerStrategy: SystemConsumerStrategies.Pinned
                 );
 
@@ -197,8 +197,8 @@ namespace Aggregates.Internal
                     var subscription = await store.SubscribeAsync(stream, group,
                         eventAppeared: (sub, e, retry, token) => eventAppeared(sub, e, token, callback),
                         // auto reconnect to subscription
-                        subscriptionDropped: (sub, reason, ex) => 
-                            subscriptionDropped(sub, reason, ex, subCancel.Token, 
+                        subscriptionDropped: (sub, reason, ex) =>
+                            subscriptionDropped(sub, reason, ex, subCancel.Token,
                             () => ConnectPinnedPersistentSubscription(stream, group, callback)
                         ),
                         autoAck: true,
@@ -215,6 +215,20 @@ namespace Aggregates.Internal
                 }
             }
             return true;
+        }
+        public async Task<T> GetProjectionResult<T>(string name, string partition)
+        {
+            var shard = Math.Abs(partition.GetHash() % _projectionConnections.Count());
+            var connection = _projectionConnections.ElementAt(shard);
+
+            try
+            {
+                return await connection.Value.GetResultAsync<T>(name, partition);
+            }
+            catch
+            {
+                return default(T);
+            }
         }
 
         public async Task<bool> EnableProjection(string name)
@@ -251,7 +265,7 @@ namespace Aggregates.Internal
                     // https://github.com/EventStore/EventStore/pull/3384
                     await connection.Value.CreateContinuousAsync(name, definition, trackEmittedStreams: true).ConfigureAwait(false);
                 }
-                catch(RpcException e) when (e.StatusCode is StatusCode.AlreadyExists)
+                catch (RpcException e) when (e.StatusCode is StatusCode.AlreadyExists)
                 {
                     Logger.WarnEvent("Projection", "Projection [{Name}] already exists", name);
                     try
@@ -266,7 +280,7 @@ namespace Aggregates.Internal
                     {
                     }
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     Logger.ErrorEvent("Projection", ex, "Failed to create projection [{Name}]", name);
                 }
@@ -537,8 +551,8 @@ namespace Aggregates.Internal
             return DoWrite(stream, translatedEvents, expectedVersion);
         }
 
-        public async Task WriteMetadata(string stream, 
-            int? maxCount = null, 
+        public async Task WriteMetadata(string stream,
+            int? maxCount = null,
             long? truncateBefore = null,
             TimeSpan? maxAge = null,
             TimeSpan? cacheControl = null)
@@ -600,7 +614,7 @@ namespace Aggregates.Internal
                 try
                 {
                     IWriteResult result;
-                    if(expectedVersion.HasValue)
+                    if (expectedVersion.HasValue)
                         result = await
                             client.Value.AppendToStreamAsync(stream, StreamRevision.FromInt64(expectedVersion.Value), events)
                                 .ConfigureAwait(false);
@@ -608,7 +622,7 @@ namespace Aggregates.Internal
                         result = await
                             client.Value.AppendToStreamAsync(stream, StreamState.Any, events)
                                 .ConfigureAwait(false);
-                    
+
                     nextVersion = result.NextExpectedStreamRevision.ToInt64();
                 }
                 catch (WrongExpectedVersionException e)

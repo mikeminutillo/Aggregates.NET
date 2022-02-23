@@ -28,10 +28,12 @@ namespace Aggregates.Internal
         public async Task<ISnapshot> GetSnapshot<TEntity, TState>(string bucket, Id streamId, Id[] parents) where TEntity : IEntity<TState> where TState : class, IState, new()
         {
             var snapshot = await _store.GetSnapshot<TEntity>(bucket, streamId, parents).ConfigureAwait(false);
-            // Make a copy of the snapshot for use by user
-            (snapshot.Payload as IState).Snapshot = _serializer.Deserialize<TState>(_serializer.Serialize(snapshot.Payload));
+            if (snapshot.Payload is IState)
+            {
+                // Make a copy of the snapshot for use by user
+                (snapshot.Payload as IState).Snapshot = _serializer.Deserialize<TState>(_serializer.Serialize(snapshot.Payload));
+            }
             return snapshot;
-
         }
 
 

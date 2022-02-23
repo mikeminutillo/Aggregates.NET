@@ -135,27 +135,15 @@ fromCategory('{0}')
             parents.Add(new ParentDescriptor { EntityType = _registrar.GetVersionedName(child.Parent.GetType()), StreamId = child.Parent.Id });
             return parents.ToArray();
         }
-        public async Task<ChildrenProjection> GetChildrenData<TParent>(Version version, TParent parent) where TParent : IHaveEntities<TParent>
+        public Task<ChildrenProjection> GetChildrenData<TParent>(Version version, TParent parent) where TParent : IHaveEntities<TParent>
         {
             var parents = getParents(parent);
 
             var parentEntityType = _registrar.GetVersionedName(typeof(TParent));
 
             Logger.DebugEvent("Children", "Getting children for entity type {EntityType} stream id {Id}", parentEntityType, parent.Id);
-
             var stream = _streamIdGen(parentEntityType, StreamTypes.Children, parent.Bucket, parent.Id, parents?.Select(x => x.StreamId).ToArray());
-
-            // ES generated stream name
-            // Todo: ES projections lib has a method to get result from projections now
-            var fullStream = $"$projections-aggregates.net.children.{version}-{stream}-result";
-
-            var stateEvents = await _client.GetEvents(StreamDirection.Backwards, fullStream, count: 1).ConfigureAwait(false);
-            if (!stateEvents.Any())
-                return null;
-
-            var state = stateEvents[0];
-            var children = state.Event as ChildrenProjection;
-            return children;
+            return _client.GetProjectionResult<ChildrenProjection>($"aggregates.net.children.{version}", stream);
         }
 
         public async Task ConnectToProjection(string endpoint, Version version, IEventStoreConsumer.EventAppeared callback)

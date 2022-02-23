@@ -45,7 +45,7 @@ namespace Aggregates.Internal
         public async Task<TEntity[]> GetChildren<TEntity, TParent>(IDomainUnitOfWork uow, TParent parent) where TEntity : IChildEntity<TParent> where TParent : IHaveEntities<TParent>
         {
             if (!_enabled)
-                throw new InvalidOperationException("Could not get children, TrackChildren is not enabled in settings");
+                throw new InvalidOperationException("Can not get children, TrackChildren is not enabled in settings");
 
             var parentEntityType = _registrar.GetVersionedName(typeof(TParent));
             var childEntityType = _registrar.GetVersionedName(typeof(TEntity));
