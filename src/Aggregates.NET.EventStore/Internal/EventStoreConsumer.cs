@@ -143,7 +143,7 @@ fromCategory('{0}')
 
             Logger.DebugEvent("Children", "Getting children for entity type [{EntityType}] stream id [{Id}]", parentEntityType, parent.Id);
 
-            var parentString = parents.Select(x => x.StreamId).ToArray().BuildParentsString();
+            var parentString = parents?.Select(x => x.StreamId).BuildParentsString();
             // Cant use streamGen setting because the projection is set to this format
             var stream = $"{StreamTypes.Children}-{parent.Bucket}-[{parentString}]-{parentEntityType}-{parent.Id}";
             return _client.GetProjectionResult<ChildrenProjection>($"aggregates.net.children.{version}", stream);
