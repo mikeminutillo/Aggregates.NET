@@ -51,12 +51,12 @@ namespace Aggregates.Internal
             var childEntityType = _registrar.GetVersionedName(typeof(TEntity));
 
             var data = await _consumer.GetChildrenData<TParent>(_version, parent).ConfigureAwait(false);
-            var desiredChildren = data?.Children.Where(x => x.EntityType == childEntityType).ToArray();
+            var desiredChildren = data?.Children?.Where(x => x.EntityType == childEntityType).ToArray();
 
             if (data == null || !desiredChildren.Any())
                 return new TEntity[] { };
 
-            Logger.DebugEvent("Hydrating", "Hydrating {Count} {ChildType} children of parent {EntityType} stream id {Id}", desiredChildren.Length, childEntityType, parentEntityType, parent.Id);
+            Logger.DebugEvent("Hydrating", "Hydrating {Count} {ChildType} children of parent [{EntityType}] stream id [{StreamId}]", desiredChildren.Length, childEntityType, parentEntityType, parent.Id);
 
             var entities = new List<TEntity>();
             foreach (var child in desiredChildren)

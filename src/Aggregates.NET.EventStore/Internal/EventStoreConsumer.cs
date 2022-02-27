@@ -141,7 +141,7 @@ fromCategory('{0}')
 
             var parentEntityType = _registrar.GetVersionedName(typeof(TParent));
 
-            Logger.DebugEvent("Children", "Getting children for entity type [{EntityType}] stream id [{Id}]", parentEntityType, parent.Id);
+            Logger.DebugEvent("Children", "Getting children for entity type [{EntityType}] stream id [{StreamId}]", parentEntityType, parent.Id);
 
             var parentString = parents?.Select(x => x.StreamId).BuildParentsString();
             // Cant use streamGen setting because the projection is set to this format

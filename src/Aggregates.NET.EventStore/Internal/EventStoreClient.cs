@@ -216,7 +216,7 @@ namespace Aggregates.Internal
             }
             return true;
         }
-        public async Task<T> GetProjectionResult<T>(string name, string partition)
+        public Task<T> GetProjectionResult<T>(string name, string partition)
         {
             var shard = Math.Abs(partition.GetHash() % _projectionConnections.Count());
             var connection = _projectionConnections.ElementAt(shard);
@@ -224,11 +224,11 @@ namespace Aggregates.Internal
             try
             {
                 Logger.DebugEvent("EventStore", "Getting projection result from [{Name}] partition [{Partition}]", name, partition);
-                return await connection.Value.GetResultAsync<T>(name, partition);
+                return connection.Value.GetResultAsync<T>(name, partition);
             }
             catch
             {
-                return default(T);
+                return Task.FromResult(default(T));
             }
         }
 
