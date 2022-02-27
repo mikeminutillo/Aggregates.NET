@@ -96,7 +96,7 @@ fromCategory('{0}')
         return undefined;
     let lastParent = metadata.Parents.pop();
         
-    let streamId = 'CHILDREN' + '-' + metadata.Bucket + '-[' + createParents(metadata.Parents) + ']-' + lastParent.EntityType + '-' + lastParent.StreamId;
+    let streamId = '{1}' + '-' + metadata.Bucket + '-[' + createParents(metadata.Parents) + ']-' + lastParent.EntityType + '-' + lastParent.StreamId;
         
     return streamId;
 }})
@@ -117,8 +117,8 @@ fromCategory('{0}')
 }})
 .outputState();";
 
-            Logger.DebugEvent("Setup", "Setup children tracking projection {Name}", $"aggregates.net.children.{version}");
-            var appDefinition = string.Format(definition, StreamTypes.Domain);
+            Logger.DebugEvent("Setup", "Setup children tracking projection [{Name}]", $"aggregates.net.children.{version}");
+            var appDefinition = string.Format(definition, StreamTypes.Domain, StreamTypes.Children);
             await _client.CreateProjection($"aggregates.net.children.{version}", appDefinition).ConfigureAwait(false);
         }
 
@@ -141,8 +141,11 @@ fromCategory('{0}')
 
             var parentEntityType = _registrar.GetVersionedName(typeof(TParent));
 
-            Logger.DebugEvent("Children", "Getting children for entity type {EntityType} stream id {Id}", parentEntityType, parent.Id);
-            var stream = _streamIdGen(parentEntityType, StreamTypes.Children, parent.Bucket, parent.Id, parents?.Select(x => x.StreamId).ToArray());
+            Logger.DebugEvent("Children", "Getting children for entity type [{EntityType}] stream id [{Id}]", parentEntityType, parent.Id);
+
+            var parentString = parents.Select(x => x.StreamId).ToArray().BuildParentsString();
+            // Cant use streamGen setting because the projection is set to this format
+            var stream = $"{StreamTypes.Children}-{parent.Bucket}-[{parentString}]-{parentEntityType}-{parent.Id}";
             return _client.GetProjectionResult<ChildrenProjection>($"aggregates.net.children.{version}", stream);
         }
 
@@ -151,7 +154,7 @@ fromCategory('{0}')
             // Dont use "-" we dont need category projection projecting our projection
             var stream = $"{endpoint}.{version}".Replace("-", "");
 
-            Logger.DebugEvent("Connect", "Connecting to event projection {Stream}", stream);
+            Logger.DebugEvent("Connect", "Connecting to event projection [{Stream}]", stream);
             var success = await _client.ConnectPinnedPersistentSubscription(stream, endpoint,
                 (eventStream, eventNumber, @event) =>
                 {

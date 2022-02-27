@@ -223,6 +223,7 @@ namespace Aggregates.Internal
 
             try
             {
+                Logger.DebugEvent("EventStore", "Getting projection result from [{Name}] partition [{Partition}]", name, partition);
                 return await connection.Value.GetResultAsync<T>(name, partition);
             }
             catch
