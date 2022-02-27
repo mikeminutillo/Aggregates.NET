@@ -53,7 +53,7 @@ namespace Aggregates.Internal
             var data = await _consumer.GetChildrenData<TParent>(_version, parent).ConfigureAwait(false);
             var desiredChildren = data?.Children?.Where(x => x.EntityType == childEntityType).ToArray();
 
-            if (data == null || !desiredChildren.Any())
+            if (desiredChildren == null || !desiredChildren.Any())
                 return new TEntity[] { };
 
             Logger.DebugEvent("Hydrating", "Hydrating {Count} {ChildType} children of parent [{EntityType}] stream id [{StreamId}]", desiredChildren.Length, childEntityType, parentEntityType, parent.Id);
