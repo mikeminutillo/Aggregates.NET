@@ -40,7 +40,7 @@ namespace Aggregates.Internal
             // Changes which affect minor version require a new projection, ignore revision and build numbers
             _version = new Version(version.Major, version.Minor);
 
-            return _consumer.SetupChildrenProjection(endpoint, version);
+            return _consumer.SetupChildrenProjection(endpoint, _version);
         }
         public async Task<TEntity[]> GetChildren<TEntity, TParent>(IDomainUnitOfWork uow, TParent parent) where TEntity : IChildEntity<TParent> where TParent : IHaveEntities<TParent>
         {
