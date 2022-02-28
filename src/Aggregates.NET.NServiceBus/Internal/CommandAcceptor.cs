@@ -55,9 +55,13 @@ namespace Aggregates.Internal
                 {
                     _metrics.Mark("Business Exceptions", Unit.Errors);
 
-                    Logger.InfoEvent("BusinessException", "[{MessageId:l}] {MessageType} rejected {Message}", context.MessageId, context.Message.MessageType.FullName, e.Message);
+                    Logger.InfoEvent("BusinessException", "[{MessageId:l}] {MessageType} was rejected due to business exception: {Message}", context.MessageId, context.Message.MessageType.FullName, e.Message);
+
+                    // so failure reply behavior doesnt send a reply as well
+                    context.MessageHandled = true;
+
                     if (!context.MessageHeaders.ContainsKey(Defaults.RequestResponse) || context.MessageHeaders[Defaults.RequestResponse] != "1")
-                        return; // Dont throw, business exceptions are not message failures
+                        throw; // dont need a reply
 
                     // if part of saga be sure to transfer that header
                     var replyOptions = new ReplyOptions();
@@ -68,9 +72,6 @@ namespace Aggregates.Internal
                     // Tell the sender the command was rejected due to a business exception
                     var rejection = context.Builder.Build<Action<BusinessException, Reject>>();
                     await context.Reply<Reject>((msg) => rejection(e, msg), replyOptions).ConfigureAwait(false);
-
-                    // so failure reply behavior doesnt send a reply as well
-                    context.MessageHandled = true;
 
                     throw;
                 }
