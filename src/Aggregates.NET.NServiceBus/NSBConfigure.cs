@@ -76,7 +76,7 @@ namespace Aggregates
 
                 endpointConfig.MakeInstanceUniquelyAddressable(settings.UniqueAddress);
                 // Callbacks need 1 slot so minimum is 2
-                endpointConfig.LimitMessageProcessingConcurrencyTo(2);
+                //endpointConfig.LimitMessageProcessingConcurrencyTo(2);
                 // NSB doesn't have an endpoint name setter other than the constructor, hack it in
                 nsbSettings.Set("NServiceBus.Routing.EndpointName", settings.Endpoint);
 

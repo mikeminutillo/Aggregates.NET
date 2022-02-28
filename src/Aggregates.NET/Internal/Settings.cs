@@ -102,7 +102,7 @@ namespace Aggregates.Internal
 
                 container.AddSingleton<Action<BusinessException, Reject>>((ex, message) =>
                 {
-                    message.Exception = ex;
+                    //message.Exception = ex;
                     message.Message = ex.Message;
                 });
 
